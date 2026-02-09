@@ -12,12 +12,10 @@ import {
 export function AdminPage() {
   const { setCurrentView } = useApp();
 
-  // Estados de Autenticação
+  // Estados
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // Estados do Dashboard
   const [newToken, setNewToken] = useState('');
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,7 +27,6 @@ export function AdminPage() {
   // --- LOGIN MOCK ---
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Login padrão para teste
     if (email === 'admin' && password === 'admin') {
       setIsAuthenticated(true);
       setError(null);
@@ -38,7 +35,50 @@ export function AdminPage() {
     }
   };
 
-  // --- FUNÇÃO DE UPLOAD ---
+  // --- FUNÇÃO MÁGICA DE MARCA D'ÁGUA ---
+  const applyWatermark = (file: File): Promise<Blob> => {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Configura o tamanho do canvas igual ao da imagem
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        // 1. Desenha a imagem original
+        ctx.drawImage(img, 0, 0);
+
+        // 2. Configura o estilo do texto (Marca d'água)
+        const fontSize = Math.floor(img.width * 0.15); // Tamanho dinâmico (15% da largura)
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Branco transparente
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Rotaciona o texto para ficar na diagonal
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((-45 * Math.PI) / 180);
+
+        // 3. Escreve o texto
+        ctx.fillText('ELEPHOTO', 0, 0); // <--- MUDE O TEXTO AQUI SE QUISER
+
+        // 4. Transforma em arquivo de novo
+        canvas.toBlob(
+          blob => {
+            if (blob) resolve(blob);
+          },
+          'image/jpeg',
+          0.85
+        ); // Qualidade JPG 85%
+      };
+    });
+  };
+
+  // --- UPLOAD ---
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newToken.trim() || !files || files.length === 0) return;
@@ -49,8 +89,7 @@ export function AdminPage() {
     try {
       const token = newToken.trim().toUpperCase();
 
-      // 1. Criar o Token (Card) no banco de dados
-      // Nota: Certifique-se que sua tabela 'cards' permite insert público ou tem RLS configurado
+      // 1. Criar Token no Banco
       const { data: cardData, error: cardError } = await supabase
         .from('cards')
         .insert([{ code: token }])
@@ -63,36 +102,49 @@ export function AdminPage() {
         throw cardError;
       }
 
-      // 2. Upload das imagens
       const uploadedPhotos = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileExt = file.name.split('.').pop();
-        const fileName = `${token}/${Date.now()}_${i}.${fileExt}`;
+        const timestamp = Date.now();
 
-        // Upload para o Bucket 'photos'
+        // --- PARTE NOVA: GERAR VERSÃO COM MARCA D'ÁGUA ---
+        const watermarkedBlob = await applyWatermark(file);
+        const watermarkedFile = new File([watermarkedBlob], `wm_${file.name}`, {
+          type: 'image/jpeg',
+        });
+
+        // Nome dos arquivos
+        const fileNameOriginal = `${token}/original_${timestamp}_${i}.${fileExt}`;
+        const fileNamePublic = `${token}/display_${timestamp}_${i}.jpg`;
+
+        // Upload 1: Original (Para o futuro, quando o cliente comprar)
+        // Por enquanto, salvamos na mesma pasta, mas com nome diferente
+        await supabase.storage.from('photos').upload(fileNameOriginal, file);
+
+        // Upload 2: Versão com Marca D'água (Essa que vai pro site)
         const { error: uploadError } = await supabase.storage
           .from('photos')
-          .upload(fileName, file);
+          .upload(fileNamePublic, watermarkedFile);
 
         if (uploadError) throw uploadError;
 
-        // Pegar URL Pública
+        // Pegar URL Pública da versão COM MARCA D'ÁGUA
         const {
           data: { publicUrl },
-        } = supabase.storage.from('photos').getPublicUrl(fileName);
+        } = supabase.storage.from('photos').getPublicUrl(fileNamePublic);
 
         uploadedPhotos.push({
           card_id: cardData.id,
-          url: publicUrl,
-          thumbnail_url: publicUrl, // Idealmente seria uma versão menor
-          price: 15.0, // Preço padrão para teste
-          filename: fileName,
+          url: publicUrl, // Url da foto com marca d'água
+          thumbnail_url: publicUrl,
+          price: 15.0,
+          filename: fileNameOriginal, // Guardamos a referência da original para o futuro
         });
       }
 
-      // 3. Inserir referências na tabela 'photos'
+      // Inserir no banco
       const { error: photosError } = await supabase
         .from('photos')
         .insert(uploadedPhotos);
@@ -101,17 +153,15 @@ export function AdminPage() {
 
       setStatus({
         type: 'success',
-        msg: `Sucesso! Token ${token} criado com ${files.length} fotos.`,
+        msg: `Sucesso! Token ${token} criado. Fotos com marca d'água geradas!`,
       });
       setNewToken('');
       setFiles(null);
 
-      // Limpar input de arquivo
       const fileInput = document.getElementById(
         'file-upload'
       ) as HTMLInputElement;
       if (fileInput) fileInput.value = '';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error(err);
       setStatus({
@@ -128,7 +178,6 @@ export function AdminPage() {
     else setStatus(null);
   };
 
-  // --- RENDERIZAÇÃO: TELA DE LOGIN ---
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -176,7 +225,6 @@ export function AdminPage() {
             >
               Entrar
             </button>
-
             <button
               type="button"
               onClick={() => setCurrentView('home')}
@@ -190,7 +238,6 @@ export function AdminPage() {
     );
   }
 
-  // --- RENDERIZAÇÃO: DASHBOARD ---
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -215,27 +262,20 @@ export function AdminPage() {
           </h2>
 
           <form onSubmit={handleUpload} className="space-y-6">
-            {/* Input do Token */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                1. Defina o Código do Cliente (Token)
+                1. Código do Cliente
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={newToken}
-                  onChange={e => setNewToken(e.target.value.toUpperCase())}
-                  placeholder="EX: CASAMENTO01"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none uppercase tracking-wider font-semibold"
-                  disabled={loading}
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Este será o código que o cliente usará para acessar as fotos.
-              </p>
+              <input
+                type="text"
+                value={newToken}
+                onChange={e => setNewToken(e.target.value.toUpperCase())}
+                placeholder="EX: CASAMENTO01"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none uppercase font-semibold"
+                disabled={loading}
+              />
             </div>
 
-            {/* Input de Arquivos */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 2. Selecione as Fotos
@@ -264,7 +304,6 @@ export function AdminPage() {
               </div>
             </div>
 
-            {/* Status e Botão */}
             {status && (
               <div
                 className={`p-4 rounded-lg text-sm ${
@@ -280,15 +319,16 @@ export function AdminPage() {
             <button
               type="submit"
               disabled={loading || !newToken || !files}
-              className="w-full bg-gray-900 text-white py-4 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg font-light"
+              className="w-full bg-gray-900 text-white py-4 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" /> Processando...
+                  <Loader2 className="w-5 h-5 animate-spin" /> Processando (pode
+                  demorar)...
                 </>
               ) : (
                 <>
-                  <Plus className="w-5 h-5" /> Criar Álbum e Enviar Fotos
+                  <Plus className="w-5 h-5" /> Criar Álbum
                 </>
               )}
             </button>
