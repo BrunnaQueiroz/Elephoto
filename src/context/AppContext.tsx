@@ -1,11 +1,17 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 import { Photo } from '../lib/supabase';
 
+type View = 'home' | 'gallery' | 'admin';
+
 interface AppContextType {
-  currentCode: string | null;
-  setCurrentCode: (code: string | null) => void;
-  currentView: 'home' | 'gallery' | 'admin';
-  setCurrentView: (view: 'home' | 'gallery' | 'admin') => void;
+  currentView: View;
+  setCurrentView: (view: View) => void;
   cart: Photo[];
   addToCart: (photo: Photo) => void;
   removeFromCart: (photoId: string) => void;
@@ -16,17 +22,22 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentCode, setCurrentCode] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'home' | 'admin' | 'gallery'>(
-    'home'
-  );
-  const [cart, setCart] = useState<Photo[]>([]);
+  const [currentView, setCurrentView] = useState<View>('home');
+
+  // 1. Inicializa o carrinho lendo do LocalStorage (se existir)
+  const [cart, setCart] = useState<Photo[]>(() => {
+    const savedCart = localStorage.getItem('elephoto_cart');
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+
+  // 2. Sempre que o carrinho mudar, salva no LocalStorage
+  useEffect(() => {
+    localStorage.setItem('elephoto_cart', JSON.stringify(cart));
+  }, [cart]);
 
   const addToCart = (photo: Photo) => {
     setCart(prev => {
-      if (prev.find(p => p.id === photo.id)) {
-        return prev;
-      }
+      if (prev.find(p => p.id === photo.id)) return prev;
       return [...prev, photo];
     });
   };
@@ -39,13 +50,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCart([]);
   };
 
-  const cartTotal = cart.reduce((sum, photo) => sum + Number(photo.price), 0);
+  const cartTotal = cart.reduce((acc, photo) => acc + Number(photo.price), 0);
 
   return (
     <AppContext.Provider
       value={{
-        currentCode,
-        setCurrentCode,
         currentView,
         setCurrentView,
         cart,
