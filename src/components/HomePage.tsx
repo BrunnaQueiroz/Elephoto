@@ -1,195 +1,137 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Search, Camera, CheckCircle, Download } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
-import { Shield, Camera, Zap, UserCog } from 'lucide-react'; // Ícones para as novas seções
 
 export function HomePage() {
-  const [showInput, setShowInput] = useState(false);
+  const { setCurrentView, cart, clearCart } = useApp();
   const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { setCurrentCode, setCurrentView } = useApp();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Verifica se voltou do Stripe com sucesso
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('success') === 'true') {
+      setShowSuccessModal(true);
+      // Limpa a URL para não ficar aquele monte de código feio
+      window.history.replaceState({}, document.title, '/');
+    }
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) return;
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const { data, error: dbError } = await supabase
-        .from('cards')
-        .select('code')
-        .eq('code', code.trim().toUpperCase())
-        .maybeSingle();
-
-      if (dbError) throw dbError;
-
-      if (!data) {
-        setError('Código inválido. Tente novamente.');
-        setLoading(false);
-        return;
-      }
-
-      setCurrentCode(code.trim().toUpperCase());
+    if (code.trim()) {
+      localStorage.setItem('elephoto_code', code.toUpperCase());
       setCurrentView('gallery');
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
-      setError('Erro ao verificar código. Tente novamente.');
-      setLoading(false);
     }
   };
 
+  // Função para baixar as fotos originais após pagamento
+  const handleDownloadOriginals = async () => {
+    for (const photo of cart) {
+      if (photo.filename) {
+        try {
+          const { data } = await supabase.storage
+            .from('photos')
+            .download(photo.filename);
+
+          if (data) {
+            const url = window.URL.createObjectURL(data);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `original_${photo.id.slice(0, 5)}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+          }
+        } catch (err) {
+          console.error('Erro ao baixar', err);
+        }
+      }
+    }
+    // Limpa o carrinho e fecha o modal
+    clearCart();
+    setShowSuccessModal(false);
+  };
+
   return (
-    <div className="min-h-screen bg-white flex flex-col font-light">
-      {/* --- HEADER --- */}
-      <header className="border-b border-gray-100 py-4 px-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <img
-            src="/logo.png"
-            alt="Elephoto Logo"
-            className="h-10 w-auto object-contain"
-          />
-          <span className="text-xl text-gray-800 tracking-wide font-normal">
-            Elephoto
-          </span>
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* MODAL DE SUCESSO PÓS-PAGAMENTO */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full text-center shadow-2xl animate-in fade-in zoom-in">
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              Pagamento Confirmado!
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Obrigado pela compra. Suas fotos em alta resolução estão prontas.
+            </p>
+            <button
+              onClick={handleDownloadOriginals}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <Download className="w-5 h-5" /> Baixar Todas as Fotos
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Cabeçalho */}
+      <header className="p-6 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Camera className="w-6 h-6 text-gray-900" />
+          <span className="text-xl font-semibold tracking-tight">Elephoto</span>
+        </div>
+        <button
+          onClick={() => setCurrentView('admin')}
+          className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          Sou fotógrafo(a)
+        </button>
       </header>
 
-      {/* --- CONTEÚDO PRINCIPAL (HERO) --- */}
-      <main className="flex-grow">
-        <section className="py-20 px-4 text-center">
-          <div className="max-w-3xl mx-auto mb-10">
-            <h1 className="text-4xl md:text-5xl text-gray-900 mb-6 leading-tight">
-              Acesse suas fotografias com <br />
-              <span className="font-medium">segurança e praticidade</span>
+      {/* Conteúdo Principal */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 -mt-20">
+        <div className="max-w-md w-full text-center space-y-8">
+          <div className="space-y-2">
+            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-gray-900">
+              Suas fotos,
+              <br />
+              entregues com estilo.
             </h1>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Suas fotos profissionais em um só lugar. Selecione, compre e
-              receba suas imagens de forma simples e segura.
+            <p className="text-gray-500 text-lg">
+              Digite o código fornecido pelo seu fotógrafo para acessar seu
+              álbum exclusivo.
             </p>
-
-            {/* ÁREA DO FORMULÁRIO/BOTÃO CENTRALIZADA */}
-            <div className="max-w-md mx-auto">
-              {!showInput ? (
-                <button
-                  onClick={() => setShowInput(true)}
-                  className="w-full bg-gray-900 text-white py-4 px-8 rounded-lg text-lg hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
-                  Acessar Minhas Fotos
-                </button>
-              ) : (
-                <form
-                  onSubmit={handleSubmit}
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
-                >
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      value={code}
-                      onChange={e => setCode(e.target.value)}
-                      placeholder="Digite o código do cartão"
-                      className="w-full px-6 py-4 border border-gray-300 rounded-lg text-center text-lg focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-colors bg-gray-50"
-                      autoFocus
-                      disabled={loading}
-                    />
-
-                    {error && <p className="text-red-600 text-sm">{error}</p>}
-
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowInput(false);
-                          setCode('');
-                          setError('');
-                        }}
-                        className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-200 transition-colors"
-                        disabled={loading}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="flex-1 bg-gray-900 text-white py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-70"
-                        disabled={loading || !code.trim()}
-                      >
-                        {loading ? 'Verificando...' : 'Entrar'}
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              )}
-              {/* --- LINK DO FOTÓGRAFO (NOVO) --- */}
-              <div className="mt-6">
-                <button
-                  onClick={() => setCurrentView('admin')}
-                  className="text-gray-400 text-sm hover:text-gray-600 transition-colors flex items-center justify-center gap-2 mx-auto"
-                >
-                  <UserCog className="w-4 h-4" />
-                  Sou fotógrafo(a)
-                </button>
-              </div>
-            </div>
           </div>
-        </section>
 
-        {/* --- SEÇÃO DE CARACTERÍSTICAS (FEATURES) --- */}
-        <section className="bg-gray-50 py-20 px-4">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-            {/* Feature 1 */}
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-6 text-gray-700">
-                <Shield className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Acesso Privado
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                Suas fotos são exclusivas e acessíveis apenas com seu código
-                pessoal.
-              </p>
+          <form onSubmit={handleSubmit} className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400 group-focus-within:text-gray-900 transition-colors" />
             </div>
-
-            {/* Feature 2 */}
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-6 text-gray-700">
-                <Camera className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Alta Qualidade
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                Receba suas fotografias em alta resolução, prontas para
-                impressão e redes sociais.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-6 text-gray-700">
-                <Zap className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-3">
-                Pagamento Fácil
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                Pague via Pix ou cartão de crédito de forma rápida, transparente
-                e segura.
-              </p>
-            </div>
-          </div>
-        </section>
+            <input
+              type="text"
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              className="block w-full pl-11 pr-4 py-4 bg-gray-50 border-2 border-transparent rounded-xl text-lg outline-none focus:bg-white focus:border-gray-900 transition-all placeholder:text-gray-400"
+              placeholder="Digite seu código aqui..."
+            />
+            <button
+              type="submit"
+              className="absolute right-2 top-2 bottom-2 bg-gray-900 text-white px-6 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            >
+              Entrar
+            </button>
+          </form>
+        </div>
       </main>
 
-      {/* --- FOOTER --- */}
-      <footer className="bg-white py-8 border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-400 text-sm">
-            © 2026 Elephoto. Todos os direitos reservados.
-          </p>
-        </div>
+      <footer className="p-6 text-center text-gray-400 text-sm">
+        © 2024 Elephoto. Todos os direitos reservados.
       </footer>
     </div>
   );
