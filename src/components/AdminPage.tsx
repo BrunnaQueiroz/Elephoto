@@ -35,7 +35,7 @@ export function AdminPage() {
     }
   };
 
-  // --- FUNÇÃO MÁGICA DE MARCA D'ÁGUA ---
+  // --- FUNÇÃO DE MARCA D'ÁGUA ---
   const applyWatermark = (file: File): Promise<Blob> => {
     return new Promise(resolve => {
       const img = new Image();
@@ -45,51 +45,62 @@ export function AdminPage() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Configura o tamanho do canvas igual ao da imagem
         canvas.width = img.width;
         canvas.height = img.height;
 
-        // 1. Desenha a imagem original
         ctx.drawImage(img, 0, 0);
 
-        // 2. Configura o estilo do texto (Marca d'água)
-        const fontSize = Math.floor(img.width * 0.15); // Tamanho dinâmico (15% da largura)
+        const fontSize = Math.floor(img.width * 0.15);
         ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Branco transparente
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Rotaciona o texto para ficar na diagonal
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate((-45 * Math.PI) / 180);
 
-        // 3. Escreve o texto
-        ctx.fillText('ELEPHOTO', 0, 0); // <--- MUDE O TEXTO AQUI SE QUISER
+        ctx.fillText('ELEPHOTO', 0, 0);
 
-        // 4. Transforma em arquivo de novo
         canvas.toBlob(
           blob => {
             if (blob) resolve(blob);
           },
           'image/jpeg',
           0.85
-        ); // Qualidade JPG 85%
+        );
       };
     });
   };
 
-  // --- UPLOAD ---
+  // --- UPLOAD COM VALIDAÇÃO ---
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newToken.trim() || !files || files.length === 0) return;
+
+    // 1. Limpeza básica
+    const token = newToken.trim().toUpperCase();
+
+    // 2. --- NOVA VALIDAÇÃO ANTI-ERRO ---
+    // A Expressão Regular /^[A-Z0-9]+$/ aceita APENAS letras de A a Z e números.
+    // Nada de acentos (Ã, Ç, É), espaços ou símbolos (- _ @).
+    const regex = /^[A-Z0-9]+$/;
+
+    if (!token) return;
+
+    if (!regex.test(token)) {
+      setStatus({
+        type: 'error',
+        msg: '⚠️ O código não pode ter acentos, espaços ou símbolos. Use apenas letras e números (Ex: NOIVOS2026).',
+      });
+      return; // Para a função aqui mesmo!
+    }
+
+    if (!files || files.length === 0) return;
 
     setLoading(true);
     setStatus(null);
 
     try {
-      const token = newToken.trim().toUpperCase();
-
-      // 1. Criar Token no Banco
+      // Cria Token no Banco
       const { data: cardData, error: cardError } = await supabase
         .from('cards')
         .insert([{ code: token }])
@@ -98,7 +109,7 @@ export function AdminPage() {
 
       if (cardError) {
         if (cardError.code === '23505')
-          throw new Error('Este código já existe!');
+          throw new Error('Este código já existe! Tente outro.');
         throw cardError;
       }
 
@@ -106,45 +117,43 @@ export function AdminPage() {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const fileExt = file.name.split('.').pop();
+        // Remove caracteres especiais também do NOME DO ARQUIVO para evitar erros extras
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+
         const timestamp = Date.now();
-
-        // --- PARTE NOVA: GERAR VERSÃO COM MARCA D'ÁGUA ---
         const watermarkedBlob = await applyWatermark(file);
-        const watermarkedFile = new File([watermarkedBlob], `wm_${file.name}`, {
-          type: 'image/jpeg',
-        });
+        const watermarkedFile = new File(
+          [watermarkedBlob],
+          `wm_${safeFileName}`,
+          { type: 'image/jpeg' }
+        );
 
-        // Nome dos arquivos
-        const fileNameOriginal = `${token}/original_${timestamp}_${i}.${fileExt}`;
+        const fileNameOriginal = `${token}/original_${timestamp}_${i}_${safeFileName}`;
         const fileNamePublic = `${token}/display_${timestamp}_${i}.jpg`;
 
-        // Upload 1: Original (Para o futuro, quando o cliente comprar)
-        // Por enquanto, salvamos na mesma pasta, mas com nome diferente
+        // Upload Original
         await supabase.storage.from('photos').upload(fileNameOriginal, file);
 
-        // Upload 2: Versão com Marca D'água (Essa que vai pro site)
+        // Upload Marca D'água
         const { error: uploadError } = await supabase.storage
           .from('photos')
           .upload(fileNamePublic, watermarkedFile);
 
         if (uploadError) throw uploadError;
 
-        // Pegar URL Pública da versão COM MARCA D'ÁGUA
         const {
           data: { publicUrl },
         } = supabase.storage.from('photos').getPublicUrl(fileNamePublic);
 
         uploadedPhotos.push({
           card_id: cardData.id,
-          url: publicUrl, // Url da foto com marca d'água
+          url: publicUrl,
           thumbnail_url: publicUrl,
           price: 15.0,
-          filename: fileNameOriginal, // Guardamos a referência da original para o futuro
+          filename: fileNameOriginal,
         });
       }
 
-      // Inserir no banco
       const { error: photosError } = await supabase
         .from('photos')
         .insert(uploadedPhotos);
@@ -153,7 +162,7 @@ export function AdminPage() {
 
       setStatus({
         type: 'success',
-        msg: `Sucesso! Token ${token} criado. Fotos com marca d'água geradas!`,
+        msg: `Sucesso! Token ${token} criado com ${files.length} fotos.`,
       });
       setNewToken('');
       setFiles(null);
@@ -198,7 +207,7 @@ export function AdminPage() {
                 type="text"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
                 placeholder="admin"
               />
             </div>
@@ -210,7 +219,7 @@ export function AdminPage() {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
                 placeholder="admin"
               />
             </div>
@@ -274,6 +283,9 @@ export function AdminPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none uppercase font-semibold"
                 disabled={loading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Use apenas letras e números (sem acentos).
+              </p>
             </div>
 
             <div>
@@ -323,8 +335,7 @@ export function AdminPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" /> Processando (pode
-                  demorar)...
+                  <Loader2 className="w-5 h-5 animate-spin" /> Processando...
                 </>
               ) : (
                 <>
