@@ -6,7 +6,7 @@ Plataforma digital para fotógrafos entregarem e venderem fotos de forma segura 
 
 - **Frontend:** React, TypeScript, Tailwind CSS, Vite
 - **Backend/BaaS:** Supabase (PostgreSQL, Auth, Storage)
-- **Ícones:** Lucide React
+- **Ícones:** Lucide React.
 
 ## ⚙️ Funcionalidades
 
