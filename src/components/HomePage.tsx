@@ -145,9 +145,10 @@ export function HomePage() {
                     type="text"
                     value={code}
                     onChange={e => setCode(e.target.value)}
-                    placeholder="Digite o código"
+                    placeholder="Digite o código do seu elephotopass"
+                    // placeholder="Digite o código"
                     // Textos e espaçamentos menores no celular (text-sm, py-2) e maiores no PC (sm:text-lg, sm:py-3)
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text-sm sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light"
+                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text-xs sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light"
                     autoFocus
                   />
 
