@@ -90,11 +90,11 @@ export function HomePage() {
           <img
             src="/logo.png"
             alt="Elephoto"
-            className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-110"
+            className=" h-28 w-auto object-contain transition-transform duration-300 group-hover:scale-110"
           />
-          <span className="text-2xl font-medium text-gray-800 tracking-tight group-hover:text-gray-600 transition-colors">
+          {/* <span className="text-2xl font-medium text-gray-800 tracking-tight group-hover:text-gray-600 transition-colors">
             Elephoto
-          </span>
+          </span> */}
         </div>
       </header>
 

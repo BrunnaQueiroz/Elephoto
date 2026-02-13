@@ -144,7 +144,7 @@ export function GalleryPage() {
                   className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                 >
                   {/* Imagem */}
-                  <div className="aspect-[3/4] bg-gray-200 relative">
+                  <div className="aspect-[1] bg-gray-200 relative">
                     <img
                       src={photo.thumbnail_url}
                       alt="Foto"
