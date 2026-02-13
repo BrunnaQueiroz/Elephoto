@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
-import { Shield, Camera, Zap, CheckCircle, Download } from 'lucide-react';
+import { Shield, Camera, Zap, CheckCircle, Download, Key } from 'lucide-react';
 
 export function HomePage() {
   const { setCurrentView, cart, clearCart } = useApp();
@@ -80,11 +80,12 @@ export function HomePage() {
       )}
 
       {/* HEADER */}
-      <header className="px-6 py-8 flex justify-between items-center max-w-6xl mx-auto w-full">
+      {/* <header className="px-6 py-8 flex justify-between items-center max-w-6xl mx-auto w-full"> */}
+      <header className="px-6 py-8 flex justify-center items-center max-w-6xl mx-auto w-full">
         {/* LOGO INTERATIVO */}
         <div
           onClick={() => window.location.reload()}
-          className="flex items-center gap-3 cursor-pointer group select-none"
+          className=" flex items-center gap-3 cursor-pointer group select-none"
           title="Recarregar página"
         >
           <img
@@ -113,58 +114,69 @@ export function HomePage() {
             suas imagens de forma simples e segura.
           </p>
 
-          <div className="pt-8 flex flex-col items-center justify-center gap-6 w-full">
-            {!showInput ? (
-              <button
-                onClick={() => setShowInput(true)}
-                className="bg-gray-900 text-white px-10 py-4 rounded-lg text-lg font-medium hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl"
-              >
-                Acessar Minhas Fotos
-              </button>
-            ) : (
-              // --- FORMULÁRIO ESTILO CARD ---
-              <form
-                onSubmit={handleSubmit}
-                className="w-full max-w-md bg-white p-6 rounded-xl shadow-lg border border-gray-100 animate-in fade-in zoom-in duration-300"
-              >
-                {/* Input Centralizado */}
-                <div className="mb-4">
+          {/* Container principal de login */}
+          <div className="relative w-full max-w-3xl mx-auto">
+            <img
+              src="/login.png"
+              alt="Animais segurando cartão"
+              className="w-full h-auto object-contain pointer-events-none select-none"
+              draggable={false}
+            />
+
+            {/* A MÁGICA AQUI: w-[72%] acompanha a largura do desenho. left-1/2 e -translate-x-1/2 cravam no centro. */}
+            <div className="absolute w-[60%] left-1/2 -translate-x-1/2 top-[45%] bottom-[5%] flex flex-col items-center justify-center px-2 sm:px-8">
+              {!showInput ? (
+                <button
+                  onClick={() => setShowInput(true)}
+                  // Removi o max-w-xs e reduzi py-3 para py-2 em telas pequenas
+                  className="bg-[#0f172a] flex items-center justify-center gap-2 sm:gap-3 text-white px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-lg font-medium hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl w-full"
+                >
+                  <Key className="w-4 h-4 sm:w-5 h-5" />
+                  Acessar Minhas Fotos
+                </button>
+              ) : (
+                // --- FORMULÁRIO ESTILO CARD ---
+                <form
+                  onSubmit={handleSubmit}
+                  // Removi o max-w-xs
+                  className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in zoom-in duration-300"
+                >
                   <input
                     type="text"
                     value={code}
                     onChange={e => setCode(e.target.value)}
-                    placeholder="Digite o código do cartão"
-                    className="w-full px-4 py-3 border border-gray-400 rounded-lg text-lg text-center focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light"
+                    placeholder="Digite o código"
+                    // Textos e espaçamentos menores no celular (text-sm, py-2) e maiores no PC (sm:text-lg, sm:py-3)
+                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text-sm sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light"
                     autoFocus
                   />
-                </div>
 
-                {/* Botões Lado a Lado */}
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowInput(false)}
-                    className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 bg-gray-700 text-white py-3 rounded-lg font-medium hover:bg-gray-900 transition-colors"
-                  >
-                    Entrar
-                  </button>
-                </div>
-              </form>
-            )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowInput(false)}
+                      className="flex-1 bg-gray-100 text-gray-600 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
+                    >
+                      Entrar
+                    </button>
+                  </div>
+                </form>
+              )}
 
-            {/* LINK DE FOTÓGRAFO */}
-            <button
-              onClick={() => setCurrentView('admin')}
-              className="text-gray-400 hover:text-gray-900 text-sm transition-colors mt-2 underline decoration-transparent hover:decoration-gray-400 underline-offset-4"
-            >
-              Sou fotógrafo(a)
-            </button>
+              {/* LINK DE FOTÓGRAFO */}
+              <button
+                onClick={() => setCurrentView('admin')}
+                className="text-gray-500 hover:text-gray-900 text-xs sm:text-sm transition-colors mt-2 sm:mt-4 underline decoration-transparent hover:decoration-gray-400 underline-offset-4"
+              >
+                Sou fotógrafo(a)
+              </button>
+            </div>
           </div>
         </div>
       </main>
