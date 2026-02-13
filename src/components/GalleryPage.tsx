@@ -13,14 +13,15 @@ import {
 import { Cart } from './Cart';
 
 export function GalleryPage() {
-  const { setCurrentView, addToCart, cart, removeFromCart } = useApp();
+  const { setCurrentView, addToCart, cart, removeFromCart, clearCart } =
+    useApp();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [albumCode, setAlbumCode] = useState('');
 
-  // NOVO ESTADO: Controla qual foto está aberta no modal
+  //  Controla qual foto está aberta no modal
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
   useEffect(() => {
@@ -83,15 +84,13 @@ export function GalleryPage() {
           selected ? removeFromCart(photo.id) : addToCart(photo);
         }}
         className={`rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-          isLarge
-            ? 'px-6 py-3 min-w-[200px]' // Estilo para o botão no Modal
-            : 'w-full py-3' // Estilo para o botão no Grid
+          isLarge ? 'px-6 py-3 min-w-[200px]' : 'w-full py-3'
         } ${
           selected
             ? 'bg-green-100 text-green-800 hover:bg-green-200'
             : isLarge
-            ? 'bg-white text-gray-900 hover:bg-gray-100' // Botão branco no fundo preto
-            : 'bg-gray-900 text-white hover:bg-gray-800' // Botão preto no fundo branco
+            ? 'bg-white text-gray-900 hover:bg-gray-100'
+            : 'bg-gray-900 text-white hover:bg-gray-800'
         }`}
       >
         {selected ? (
@@ -137,17 +136,34 @@ export function GalleryPage() {
     );
   }
 
+  const handleLogout = () => {
+    // Se tiver itens no carrinho, pede confirmação
+    if (cart.length > 0) {
+      const confirmLeave = window.confirm(
+        'Se você sair agora, seu carrinho será esvaziado. Deseja mesmo sair?'
+      );
+      if (!confirmLeave) return; // Cancela a saída se o usuário clicar em "Não"
+    }
+
+    // Limpa o carrinho e o código de acesso do usuário atual
+    clearCart();
+    localStorage.removeItem('elephoto_code');
+
+    // Volta para a tela inicial
+    setCurrentView('home');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* HEADER DA GALERIA */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 py-4 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button
-            onClick={() => setCurrentView('home')}
+            onClick={handleLogout}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">Voltar</span>
+            <span className="hidden sm:inline">Sair do Álbum</span>{' '}
           </button>
 
           <div className="text-center">

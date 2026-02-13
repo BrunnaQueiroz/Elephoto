@@ -46,12 +46,12 @@ export function HomePage() {
     setShowSuccessModal(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.trim()) {
-      localStorage.setItem('elephoto_code', code.toUpperCase());
-      setCurrentView('gallery');
-    }
+
+    clearCart(); // <-- ZERA QUALQUER LIXO ANTERIOR AQUI
+    localStorage.setItem('elephoto_code', code);
+    setCurrentView('gallery');
   };
 
   return (
@@ -80,7 +80,7 @@ export function HomePage() {
       )}
 
       {/* HEADER */}
-      {/* <header className="px-6 py-8 flex justify-between items-center max-w-6xl mx-auto w-full"> */}
+
       <header className="px-6 py-8 flex justify-center items-center max-w-6xl mx-auto w-full">
         {/* LOGO INTERATIVO */}
         <div
