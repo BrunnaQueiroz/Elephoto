@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase, Photo } from '../lib/supabase';
-import { ArrowLeft, ShoppingCart, Plus, Check, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Plus,
+  Check,
+  Loader2,
+  X,
+  Maximize2,
+} from 'lucide-react';
 import { Cart } from './Cart';
 
 export function GalleryPage() {
@@ -12,6 +20,9 @@ export function GalleryPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [albumCode, setAlbumCode] = useState('');
 
+  // NOVO ESTADO: Controla qual foto está aberta no modal
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+
   useEffect(() => {
     fetchPhotos();
   }, []);
@@ -20,7 +31,6 @@ export function GalleryPage() {
     try {
       setLoading(true);
       setError(null);
-
       const code = localStorage.getItem('elephoto_code');
 
       if (!code) {
@@ -51,7 +61,6 @@ export function GalleryPage() {
         .eq('card_id', cardData.id);
 
       if (photosError) throw photosError;
-
       setPhotos(photosData || []);
     } catch (err) {
       console.error('Erro ao buscar fotos:', err);
@@ -62,6 +71,42 @@ export function GalleryPage() {
   };
 
   const isInCart = (photoId: string) => cart.some(p => p.id === photoId);
+
+  // Função auxiliar para evitar repetição no botão
+  const renderCartButton = (photo: Photo, isLarge = false) => {
+    const selected = isInCart(photo.id);
+    return (
+      <button
+        onClick={e => {
+          e.stopPropagation(); // Evita fechar o modal ao clicar no botão
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          selected ? removeFromCart(photo.id) : addToCart(photo);
+        }}
+        className={`rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+          isLarge
+            ? 'px-6 py-3 min-w-[200px]' // Estilo para o botão no Modal
+            : 'w-full py-3' // Estilo para o botão no Grid
+        } ${
+          selected
+            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+            : isLarge
+            ? 'bg-white text-gray-900 hover:bg-gray-100' // Botão branco no fundo preto
+            : 'bg-gray-900 text-white hover:bg-gray-800' // Botão preto no fundo branco
+        }`}
+      >
+        {selected ? (
+          <>
+            <Check className="w-5 h-5" />{' '}
+            {isLarge ? 'Adicionado' : 'No carrinho'}
+          </>
+        ) : (
+          <>
+            <Plus className="w-5 h-5" /> Adicionar
+          </>
+        )}
+      </button>
+    );
+  };
 
   if (loading) {
     return (
@@ -136,61 +181,87 @@ export function GalleryPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {photos.map(photo => {
-              const selected = isInCart(photo.id);
-              return (
+            {photos.map(photo => (
+              <div
+                key={photo.id}
+                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group"
+              >
+                {/* Imagem com Trigger do Modal */}
                 <div
-                  key={photo.id}
-                  className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                  className="aspect-[1] bg-gray-200 relative cursor-zoom-in overflow-hidden"
+                  onClick={() => setSelectedPhoto(photo)}
                 >
-                  {/* Imagem */}
-                  <div className="aspect-[1] bg-gray-200 relative">
-                    <img
-                      src={photo.thumbnail_url}
-                      alt="Foto"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {/* Informações e Botão */}
-                  <div className="p-4 space-y-3">
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium">
-                        Foto Digital
-                      </p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        R$ {Number(photo.price).toFixed(2)}
-                      </p>
-                    </div>
-
-                    {/* BOTÃO LARGO ESTILO FOTO 2 */}
-                    <button
-                      onClick={() =>
-                        selected ? removeFromCart(photo.id) : addToCart(photo)
-                      }
-                      className={`w-full py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                        selected
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-gray-900 text-white hover:bg-gray-800'
-                      }`}
-                    >
-                      {selected ? (
-                        <>
-                          <Check className="w-5 h-5" /> No carrinho
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-5 h-5" /> Adicionar
-                        </>
-                      )}
-                    </button>
+                  <img
+                    src={photo.thumbnail_url}
+                    alt="Foto"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  {/* Overlay com ícone de zoom no hover */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <Maximize2 className="text-white w-8 h-8 drop-shadow-lg" />
                   </div>
                 </div>
-              );
-            })}
+
+                {/* Informações e Botão */}
+                <div className="p-4 space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">
+                      Foto Digital
+                    </p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      R$ {Number(photo.price).toFixed(2)}
+                    </p>
+                  </div>
+                  {renderCartButton(photo)}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
+
+      {/* MODAL / LIGHTBOX (VISUALIZAÇÃO AMPLIADA) */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setSelectedPhoto(null)} // Fecha ao clicar no fundo
+        >
+          {/* Botão Fechar */}
+          <button
+            onClick={() => setSelectedPhoto(null)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {/* Imagem Grande */}
+          <div
+            className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center"
+            onClick={e => e.stopPropagation()} // Evita fechar ao clicar na imagem
+          >
+            <img
+              // Tenta usar a URL original se existir, senão usa a thumbnail mesmo
+              src={selectedPhoto.url || selectedPhoto.thumbnail_url}
+              alt="Visualização ampliada"
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+
+          {/* Barra de Ações Inferior */}
+          <div
+            className="mt-6 flex items-center gap-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-white text-center">
+              <p className="text-sm opacity-70">Foto Digital</p>
+              <p className="text-xl font-bold">
+                R$ {Number(selectedPhoto.price).toFixed(2)}
+              </p>
+            </div>
+            {renderCartButton(selectedPhoto, true)}
+          </div>
+        </div>
+      )}
 
       {/* CARRINHO */}
       <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
