@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import imageCompression from 'browser-image-compression';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 import {
@@ -24,6 +25,11 @@ export function AdminPage() {
     msg: string;
   } | null>(null);
 
+  const setError = (msg: string | null) => {
+    if (msg) setStatus({ type: 'error', msg });
+    else setStatus(null);
+  };
+
   // --- LOGIN MOCK ---
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +42,8 @@ export function AdminPage() {
   };
 
   // --- FUNÇÃO DE MARCA D'ÁGUA ---
-  const applyWatermark = (file: File): Promise<Blob> => {
+  // Aceita File ou Blob (pois a compressão retorna um File/Blob)
+  const applyWatermark = (file: File | Blob): Promise<Blob> => {
     return new Promise(resolve => {
       const img = new Image();
       img.src = URL.createObjectURL(file);
@@ -72,7 +79,7 @@ export function AdminPage() {
     });
   };
 
-  // --- UPLOAD COM VALIDAÇÃO ---
+  // --- UPLOAD COM VALIDAÇÃO E COMPRESSÃO ---
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -80,8 +87,6 @@ export function AdminPage() {
     const token = newToken.trim().toUpperCase();
 
     // 2. --- NOVA VALIDAÇÃO ANTI-ERRO ---
-    // A Expressão Regular /^[A-Z0-9]+$/ aceita APENAS letras de A a Z e números.
-    // Nada de acentos (Ã, Ç, É), espaços ou símbolos (- _ @).
     const regex = /^[A-Z0-9]+$/;
 
     if (!token) return;
@@ -91,7 +96,7 @@ export function AdminPage() {
         type: 'error',
         msg: '⚠️ O código não pode ter acentos, espaços ou símbolos. Use apenas letras e números (Ex: NOIVOS2026).',
       });
-      return; // Para a função aqui mesmo!
+      return;
     }
 
     if (!files || files.length === 0) return;
@@ -117,11 +122,23 @@ export function AdminPage() {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        // Remove caracteres especiais também do NOME DO ARQUIVO para evitar erros extras
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-
         const timestamp = Date.now();
-        const watermarkedBlob = await applyWatermark(file);
+
+        // ----------------------------------------------------
+        // PASSO A: COMPRESSÃO DA IMAGEM PARA A VITRINE
+        // ----------------------------------------------------
+        const compressionOptions = {
+          maxSizeMB: 0.3, // Máximo de 300KB
+          maxWidthOrHeight: 1080, // Tamanho ideal para web/celular
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, compressionOptions);
+
+        // ----------------------------------------------------
+        // PASSO B: MARCA D'ÁGUA NA IMAGEM JÁ COMPRIMIDA
+        // ----------------------------------------------------
+        const watermarkedBlob = await applyWatermark(compressedFile);
         const watermarkedFile = new File(
           [watermarkedBlob],
           `wm_${safeFileName}`,
@@ -131,24 +148,28 @@ export function AdminPage() {
         const fileNameOriginal = `${token}/original_${timestamp}_${i}_${safeFileName}`;
         const fileNamePublic = `${token}/display_${timestamp}_${i}.jpg`;
 
-        // Upload Original
+        // Upload Original (A foto pesada de 10MB sem marca d'água)
         await supabase.storage.from('photos').upload(fileNameOriginal, file);
 
-        // Upload Marca D'água
+        // Upload Vitrine (A foto leve de 300KB com marca d'água)
         const { error: uploadError } = await supabase.storage
           .from('photos')
           .upload(fileNamePublic, watermarkedFile);
 
         if (uploadError) throw uploadError;
 
+        // Pegar as duas URLs
         const {
-          data: { publicUrl },
+          data: { publicUrl: thumbUrl },
         } = supabase.storage.from('photos').getPublicUrl(fileNamePublic);
+        const {
+          data: { publicUrl: origUrl },
+        } = supabase.storage.from('photos').getPublicUrl(fileNameOriginal);
 
         uploadedPhotos.push({
           card_id: cardData.id,
-          url: publicUrl,
-          thumbnail_url: publicUrl,
+          url: origUrl, // A foto original pesada para download pós-compra
+          thumbnail_url: thumbUrl, // A foto leve e protegida para a galeria
           price: 15.0,
           filename: fileNameOriginal,
         });
@@ -180,11 +201,6 @@ export function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const setError = (msg: string | null) => {
-    if (msg) setStatus({ type: 'error', msg });
-    else setStatus(null);
   };
 
   if (!isAuthenticated) {
@@ -335,7 +351,8 @@ export function AdminPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" /> Processando...
+                  <Loader2 className="w-5 h-5 animate-spin" /> Processando
+                  Imagens...
                 </>
               ) : (
                 <>
