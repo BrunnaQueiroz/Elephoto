@@ -54,11 +54,11 @@ export function AdminPage() {
   // --- LOGIN MOCK ---
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'admin' && password === 'admin') {
+    if (email === 'admin' && password === 'Eleph@to2026') {
       setIsAuthenticated(true);
       setError(null);
     } else {
-      setError('Credenciais inválidas. Tente admin / admin');
+      setError('Credenciais inválidas. ');
     }
   };
 
@@ -245,7 +245,6 @@ export function AdminPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
-                placeholder="admin"
               />
             </div>
             <div>
@@ -257,7 +256,6 @@ export function AdminPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
-                placeholder="admin"
               />
             </div>
 
