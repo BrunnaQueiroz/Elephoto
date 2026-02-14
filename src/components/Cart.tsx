@@ -16,11 +16,25 @@ export function Cart({ isOpen, onClose }: CartProps) {
   const handleCheckout = async () => {
     setIsProcessing(true);
     try {
-      // Envia o carrinho para a API do Stripe
+      // 1. A MÁGICA AQUI: Aplicamos a sua regra de desconto ANTES de enviar pro Stripe
+      const cartWithDiscount = cart.map((photo, index) => {
+        const posicao = index + 1;
+        const precoBase = 6.9;
+        const precoExibicao =
+          posicao >= 6 ? 1.99 : precoBase * Math.pow(0.8, index);
+
+        return {
+          ...photo,
+          price: precoExibicao, // Sobrescreve os R$15 do banco pelo valor com desconto
+          name: `Foto Digital (${posicao}ª Foto)`, // Ajuda a ficar bonitinho no recibo do Stripe
+        };
+      });
+
+      // 2. Envia o carrinho já com os preços matematicamente calculados
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cart }),
+        body: JSON.stringify({ cart: cartWithDiscount }),
       });
 
       const data = await response.json();
