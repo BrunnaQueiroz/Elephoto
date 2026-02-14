@@ -25,6 +25,27 @@ export function AdminPage() {
     msg: string;
   } | null>(null);
 
+  const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.toUpperCase();
+    let formattedCode = '';
+
+    for (let i = 0; i < rawValue.length; i++) {
+      const char = rawValue[i];
+
+      if (formattedCode.length < 3) {
+        if (/[A-Z]/.test(char)) {
+          formattedCode += char;
+        }
+      } else if (formattedCode.length < 7) {
+        if (/[0-9]/.test(char)) {
+          formattedCode += char;
+        }
+      }
+    }
+
+    setNewToken(formattedCode);
+  };
+
   const setError = (msg: string | null) => {
     if (msg) setStatus({ type: 'error', msg });
     else setStatus(null);
@@ -42,7 +63,6 @@ export function AdminPage() {
   };
 
   // --- FUNÇÃO DE MARCA D'ÁGUA ---
-  // Aceita File ou Blob (pois a compressão retorna um File/Blob)
   const applyWatermark = (file: File | Blob): Promise<Blob> => {
     return new Promise(resolve => {
       const img = new Image();
@@ -87,14 +107,15 @@ export function AdminPage() {
     const token = newToken.trim().toUpperCase();
 
     // 2. --- NOVA VALIDAÇÃO ANTI-ERRO ---
-    const regex = /^[A-Z0-9]+$/;
+    // Exige EXATAMENTE 3 letras seguidas de 4 números.
+    const regex = /^[A-Z]{3}[0-9]{4}$/;
 
     if (!token) return;
 
     if (!regex.test(token)) {
       setStatus({
         type: 'error',
-        msg: '⚠️ O código não pode ter acentos, espaços ou símbolos. Use apenas letras e números (Ex: NOIVOS2026).',
+        msg: '⚠️ O código deve ter exatamente 3 letras seguidas de 4 números (Ex: ABC1234).',
       });
       return;
     }
@@ -183,7 +204,7 @@ export function AdminPage() {
 
       setStatus({
         type: 'success',
-        msg: `Sucesso! Token ${token} criado com ${files.length} fotos.`,
+        msg: `Sucesso! Álbum ${token} criado com ${files.length} fotos.`,
       });
       setNewToken('');
       setFiles(null);
@@ -294,13 +315,14 @@ export function AdminPage() {
               <input
                 type="text"
                 value={newToken}
-                onChange={e => setNewToken(e.target.value.toUpperCase())}
-                placeholder="EX: CASAMENTO01"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none uppercase font-semibold"
+                onChange={handleTokenChange}
+                maxLength={7}
+                placeholder="EX: ABC1234"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none uppercase font-semibold tracking-widest font-mono"
                 disabled={loading}
               />
               <p className="text-xs text-gray-500 mt-1">
-                Use apenas letras e números (sem acentos).
+                Obrigatório: Exatamente 3 letras seguidas de 4 números.
               </p>
             </div>
 
@@ -346,8 +368,8 @@ export function AdminPage() {
 
             <button
               type="submit"
-              disabled={loading || !newToken || !files}
-              className="w-full bg-gray-900 text-white py-4 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              disabled={loading || newToken.length !== 7 || !files}
+              className="w-full bg-gray-900 text-white py-4 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
