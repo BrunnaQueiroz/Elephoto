@@ -222,44 +222,45 @@ export function GalleryPage() {
                 {/* Seção de Metadados e Botão */}
                 <div className="p-3 sm:p-4 mt-auto space-y-3">
                   {/* Bloco de Informações Técnicas */}
-                  <div className="grid grid-cols-1 gap-1 text-[10px] sm:text-[12px] text-gray-400 font-mono uppercase leading-tight">
-                    <div className="flex justify-between border-b border-gray-50 pb-1">
-                      <span>Resolução:</span>
-                      <span className="text-gray-600">
-                        {photo.width && photo.height
-                          ? `${photo.width}x${photo.height}`
-                          : 'Original'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b border-gray-50 pb-1">
-                      <span>Data/Hora:</span>
-                      <span className="text-gray-600">
-                        {photo.created_at ? (
-                          <>
-                            {new Date(photo.created_at).toLocaleDateString(
-                              'pt-BR'
-                            )}{' '}
-                            {new Date(photo.created_at).toLocaleTimeString(
-                              'pt-BR',
-                              {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              }
-                            )}
-                          </>
-                        ) : (
-                          '--/--/--'
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Formato:</span>
-                      <span className="text-gray-600">
-                        {photo.format ||
-                          photo.filename?.split('.').pop()?.toUpperCase() ||
-                          'JPG'}
-                      </span>
-                    </div>
+                  {/* Informações e Botão */}
+                  <div className="p-3 sm:p-4 flex flex-col flex-1 bg-white">
+                    {/* Lista de Especificações */}
+                    <ul className="space-y-2 sm:space-y-2.5 mb-4 text-[10px] sm:text-xs text-gray-500 w-full">
+                      {/* RESOLUÇÃO */}
+                      {/* flex-col no celular (título em cima, valor embaixo) | sm:flex-row no PC (lado a lado) */}
+                      <li className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
+                        <span className="font-medium uppercase tracking-wider text-gray-400">
+                          Resolução:
+                        </span>
+                        <span className="text-gray-900 font-semibold sm:text-right">
+                          ORIGINAL
+                        </span>
+                      </li>
+
+                      {/* DATA/HORA */}
+                      <li className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
+                        <span className="font-medium uppercase tracking-wider text-gray-400">
+                          Data/Hora:
+                        </span>
+                        {/* Como agora tem a linha inteira no celular, a data e hora não vão quebrar feio */}
+                        <span className="text-gray-900 font-semibold sm:text-right">
+                          09/02/2026 20:42
+                        </span>
+                      </li>
+
+                      {/* FORMATO */}
+                      <li className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
+                        <span className="font-medium uppercase tracking-wider text-gray-400">
+                          Formato:
+                        </span>
+                        <span className="text-gray-900 font-semibold sm:text-right">
+                          JPEG
+                        </span>
+                      </li>
+                    </ul>
+
+                    {/* mt-auto: O segredo para alinhar os botões na base, não importa o tamanho do texto acima */}
+                    <div className="mt-auto">{renderCartButton(photo)}</div>
                   </div>
 
                   {/* Botão de Ação */}
