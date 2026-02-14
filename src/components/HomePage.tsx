@@ -19,6 +19,32 @@ export function HomePage() {
     }
   }, []);
 
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Pega o valor digitado e já transforma tudo em maiúsculo
+    const rawValue = e.target.value.toUpperCase();
+    let formattedCode = '';
+
+    // Passa caractere por caractere fazendo a validação
+    for (let i = 0; i < rawValue.length; i++) {
+      const char = rawValue[i];
+
+      if (formattedCode.length < 3) {
+        // Nas 3 primeiras posições, só permite LETRAS de A a Z
+        if (/[A-Z]/.test(char)) {
+          formattedCode += char;
+        }
+      } else if (formattedCode.length < 7) {
+        // Da 4ª à 7ª posição, só permite NÚMEROS de 0 a 9
+        if (/[0-9]/.test(char)) {
+          formattedCode += char;
+        }
+      }
+    }
+
+    // Atualiza a caixinha com o valor perfeito e filtrado
+    setCode(formattedCode);
+  };
+
   const handleDownloadOriginals = async () => {
     for (const photo of cart) {
       if (photo.filename) {
@@ -125,16 +151,15 @@ export function HomePage() {
               // --- FORMULÁRIO ESTILO CARD ---
               <form
                 onSubmit={handleSubmit}
-                // Removi o max-w-xs
                 className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in zoom-in duration-300"
               >
                 <input
                   type="text"
                   value={code}
-                  onChange={e => setCode(e.target.value)}
-                  placeholder="Código elephotopass"
-                  // Textos e espaçamentos menores no celular (text-sm, py-2) e maiores no PC (sm:text-lg, sm:py-3)
-                  className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text- sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light"
+                  onChange={handleCodeChange}
+                  maxLength={7}
+                  placeholder="Ex: ABC1234"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text-sm sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light tracking-widest font-mono uppercase"
                   autoFocus
                 />
 
@@ -148,7 +173,9 @@ export function HomePage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
+                    // Trava o botão "Entrar" se o código não tiver exatamente 7 caracteres
+                    disabled={code.length !== 7}
+                    className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Entrar
                   </button>
