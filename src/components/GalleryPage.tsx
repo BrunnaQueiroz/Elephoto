@@ -203,7 +203,6 @@ export function GalleryPage() {
                 key={photo.id}
                 className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col"
               >
-                {/* Imagem com Trigger do Modal */}
                 <div
                   className="aspect-square bg-gray-200 relative cursor-zoom-in overflow-hidden"
                   onClick={() => setSelectedPhoto(photo)}
@@ -213,58 +212,47 @@ export function GalleryPage() {
                     alt="Foto"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  {/* Overlay com ícone de zoom no hover */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <Maximize2 className="text-white w-8 h-8 drop-shadow-lg" />
                   </div>
                 </div>
 
-                {/* Seção de Metadados e Botão */}
-                <div className="p-3 sm:p-4 mt-auto space-y-3">
-                  {/* Bloco de Informações Técnicas */}
-                  {/* Informações e Botão */}
-                  <div className="p-3 sm:p-4 flex flex-col flex-1 bg-white">
-                    {/* Lista de Especificações */}
-                    <ul className="space-y-2 sm:space-y-2.5 mb-4 text-[10px] sm:text-xs text-gray-500 w-full">
-                      {/* RESOLUÇÃO */}
-                      {/* flex-col no celular (título em cima, valor embaixo) | sm:flex-row no PC (lado a lado) */}
-                      <li className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
-                        <span className="font-medium uppercase tracking-wider text-gray-400">
-                          Resolução:
-                        </span>
-                        <span className="text-gray-900 font-semibold sm:text-right">
-                          ORIGINAL
-                        </span>
-                      </li>
+                <div className="p-3 sm:p-4 flex flex-col flex-1 bg-white">
+                  {/* TROQUEI mb-4 por my-auto: Isso faz a lista ficar exatamente no meio do espaço vertical disponível */}
+                  <ul className="my-auto space-y-2 sm:space-y-2.5 text-[10px] sm:text-xs text-gray-500 w-full py-2 sm:py-0">
+                    {/* ADICIONEI items-center text-center: No celular o texto empilhado fica centralizado no meio do card */}
+                    <li className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
+                      <span className="font-medium uppercase tracking-wider text-gray-400">
+                        Resolução:
+                      </span>
+                      <span className="text-gray-900 font-semibold sm:text-right">
+                        ORIGINAL
+                      </span>
+                    </li>
 
-                      {/* DATA/HORA */}
-                      <li className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
-                        <span className="font-medium uppercase tracking-wider text-gray-400">
-                          Data/Hora:
-                        </span>
-                        {/* Como agora tem a linha inteira no celular, a data e hora não vão quebrar feio */}
-                        <span className="text-gray-900 font-semibold sm:text-right">
-                          09/02/2026 20:42
-                        </span>
-                      </li>
+                    <li className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
+                      <span className="font-medium uppercase tracking-wider text-gray-400">
+                        Data/Hora:
+                      </span>
+                      <span className="text-gray-900 font-semibold sm:text-right">
+                        09/02/2026 20:42
+                      </span>
+                    </li>
 
-                      {/* FORMATO */}
-                      <li className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
-                        <span className="font-medium uppercase tracking-wider text-gray-400">
-                          Formato:
-                        </span>
-                        <span className="text-gray-900 font-semibold sm:text-right">
-                          JPEG
-                        </span>
-                      </li>
-                    </ul>
+                    <li className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
+                      <span className="font-medium uppercase tracking-wider text-gray-400">
+                        Formato:
+                      </span>
+                      <span className="text-gray-900 font-semibold sm:text-right">
+                        JPEG
+                      </span>
+                    </li>
+                  </ul>
 
-                    {/* mt-auto: O segredo para alinhar os botões na base, não importa o tamanho do texto acima */}
-                    <div className="mt-auto">{renderCartButton(photo)}</div>
+                  {/* Adicionei um pt-3 (padding top) para o botão não colar no texto em telas muito curtas */}
+                  <div className="mt-auto pt-3 sm:pt-0">
+                    {renderCartButton(photo)}
                   </div>
-
-                  {/* Botão de Ação */}
-                  {renderCartButton(photo)}
                 </div>
               </div>
             ))}
