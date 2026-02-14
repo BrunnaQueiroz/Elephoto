@@ -63,7 +63,7 @@ export function Cart({ isOpen, onClose }: CartProps) {
 
             <div>
               <h2 className="text-2xl font-black text-gray-900 leading-none">
-                Suas Fotos
+                Suas Memórias
               </h2>
               <p className="text-sm text-pink-500 font-medium mt-1">
                 A ovelhinha está cuidando delas!
