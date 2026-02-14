@@ -81,105 +81,104 @@ export function HomePage() {
 
       {/* HEADER */}
 
-      <header className="px-6 py-8 flex justify-center items-center max-w-6xl mx-auto w-full">
+      <header className="px-6 py-8 flex max-w-6xl mx-auto w-full justify-center sm:justify-start">
         {/* LOGO INTERATIVO */}
         <div
           onClick={() => window.location.reload()}
-          className=" flex items-center gap-3 cursor-pointer group select-none"
+          className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5 cursor-pointer group select-none"
           title="Recarregar página"
         >
           <img
             src="/logo.png"
             alt="Elephoto"
-            className=" h-28 w-auto object-contain transition-transform duration-300 group-hover:scale-110"
+            // Reduzi um pouco a logo no mobile (h-16) para não ocupar meia tela
+            className="h-16 sm:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-110"
           />
-          {/* <span className="text-2xl font-medium text-gray-800 tracking-tight group-hover:text-gray-600 transition-colors">
+          <span className="text-xl sm:text-2xl font-medium text-gray-800 tracking-tight group-hover:text-gray-600 transition-colors text-center">
             Elephoto
-          </span> */}
+          </span>
         </div>
       </header>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col items-center justify-start pt-12 px-4 text-center pb-20">
-        <div className="max-w-3xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-          <h1 className="text-4xl md:text-6xl font-light text-gray-900 tracking-tight leading-tight">
-            Acesse suas fotografias com <br />
-            <span className="font-semibold block mt-2">
-              segurança e praticidade
-            </span>
-          </h1>
-
-          <p className="text-gray-500 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-            Suas fotos profissionais em um só lugar. Selecione, compre e receba
-            suas imagens de forma simples e segura.
-          </p>
+        <div className="relative w-full max-w-3xl mx-auto">
+          <img
+            src="/login.png"
+            alt="Animais segurando cartão"
+            className="w-full h-auto object-contain pointer-events-none select-none"
+            draggable={false}
+          />
 
           {/* Container principal de login */}
-          <div className="relative w-full max-w-3xl mx-auto">
-            <img
-              src="/login.png"
-              alt="Animais segurando cartão"
-              className="w-full h-auto object-contain pointer-events-none select-none"
-              draggable={false}
-            />
-
-            {/* A MÁGICA AQUI: w-[72%] acompanha a largura do desenho. left-1/2 e -translate-x-1/2 cravam no centro. */}
-            <div className="absolute w-[60%] left-1/2 -translate-x-1/2 top-[45%] bottom-[5%] flex flex-col items-center justify-center px-2 sm:px-8">
-              {!showInput ? (
-                <button
-                  onClick={() => setShowInput(true)}
-                  // Removi o max-w-xs e reduzi py-3 para py-2 em telas pequenas
-                  className="bg-[#0f172a] flex items-center justify-center gap-2 sm:gap-3 text-white px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-lg font-medium hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl w-full"
-                >
-                  <Key className="w-4 h-4 sm:w-5 h-5" />
-                  Acessar Minhas Fotos
-                </button>
-              ) : (
-                // --- FORMULÁRIO ESTILO CARD ---
-                <form
-                  onSubmit={handleSubmit}
-                  // Removi o max-w-xs
-                  className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in zoom-in duration-300"
-                >
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={e => setCode(e.target.value)}
-                    placeholder="Código elephotopass"
-                    // Textos e espaçamentos menores no celular (text-sm, py-2) e maiores no PC (sm:text-lg, sm:py-3)
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text- sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light"
-                    autoFocus
-                  />
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowInput(false)}
-                      className="flex-1 bg-gray-100 text-gray-600 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
-                    >
-                      Entrar
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* LINK DE FOTÓGRAFO */}
+          <div className="absolute w-[60%] left-1/2 -translate-x-1/2 top-[45%] bottom-[5%] flex flex-col items-center justify-center px-2 sm:px-8">
+            {!showInput ? (
               <button
-                onClick={() => setCurrentView('admin')}
-                className="text-gray-500 hover:text-gray-900 text-xs sm:text-sm transition-colors mt-2 sm:mt-4 underline decoration-transparent hover:decoration-gray-400 underline-offset-4"
+                onClick={() => setShowInput(true)}
+                // Removi o max-w-xs e reduzi py-3 para py-2 em telas pequenas
+                className="bg-[#0f172a] flex items-center justify-center gap-2 sm:gap-3 text-white px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-lg font-medium hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl w-full"
               >
-                Sou fotógrafo(a)
+                <Key className="w-4 h-4 sm:w-5 h-5" />
+                Acessar Minhas Fotos
               </button>
-            </div>
+            ) : (
+              // --- FORMULÁRIO ESTILO CARD ---
+              <form
+                onSubmit={handleSubmit}
+                // Removi o max-w-xs
+                className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in zoom-in duration-300"
+              >
+                <input
+                  type="text"
+                  value={code}
+                  onChange={e => setCode(e.target.value)}
+                  placeholder="Código elephotopass"
+                  // Textos e espaçamentos menores no celular (text-sm, py-2) e maiores no PC (sm:text-lg, sm:py-3)
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text- sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light"
+                  autoFocus
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowInput(false)}
+                    className="flex-1 bg-gray-100 text-gray-600 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
+                  >
+                    Entrar
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* LINK DE FOTÓGRAFO */}
+            <button
+              onClick={() => setCurrentView('admin')}
+              className="text-gray-500 hover:text-gray-900 text-xs sm:text-sm transition-colors mt-2 sm:mt-4 underline decoration-transparent hover:decoration-gray-400 underline-offset-4"
+            >
+              Sou fotógrafo(a)
+            </button>
           </div>
         </div>
       </main>
+      <div className="max-w-4xl mx-auto text-center space-y-8 animate-in slide-in-from-bottom-4 duration-700 bg-slate-50 py-16 px-6 sm:px-12 rounded-3xl border border-slate-100 shadow-sm">
+        <h1 className="text-4xl md:text-6xl font-light text-gray-900 tracking-tight leading-tight">
+          Acesse suas fotografias com <br />
+          <span className="font-semibold block mt-2">
+            segurança e praticidade
+          </span>
+        </h1>
+
+        <p className="text-gray-500 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+          Suas fotos profissionais em um só lugar. Selecione, compre e receba
+          suas imagens de forma simples e segura.
+        </p>
+      </div>
 
       {/* FEATURES SECTION (Rodapé Cinza Claro) */}
       <div className="bg-gray-50 border-t border-gray-100 py-16 px-4">
