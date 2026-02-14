@@ -188,6 +188,7 @@ export function GalleryPage() {
       </header>
 
       {/* GRID DE FOTOS */}
+      {/* GRID DE FOTOS */}
       <main className="max-w-6xl mx-auto p-4 py-8">
         {photos.length === 0 ? (
           <div className="text-center py-20">
@@ -196,15 +197,15 @@ export function GalleryPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {photos.map(photo => (
               <div
                 key={photo.id}
-                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group"
+                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col"
               >
                 {/* Imagem com Trigger do Modal */}
                 <div
-                  className="aspect-[1] bg-gray-200 relative cursor-zoom-in overflow-hidden"
+                  className="aspect-square bg-gray-200 relative cursor-zoom-in overflow-hidden"
                   onClick={() => setSelectedPhoto(photo)}
                 >
                   <img
@@ -218,16 +219,50 @@ export function GalleryPage() {
                   </div>
                 </div>
 
-                {/* Informações e Botão */}
-                <div className="p-4 space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-500 font-medium">
-                      Foto Digital
-                    </p>
-                    <p className="text-lg font-semibold text-gray-900">
-                      R$ {Number(photo.price).toFixed(2)}
-                    </p>
+                {/* Seção de Metadados e Botão */}
+                <div className="p-3 sm:p-4 mt-auto space-y-3">
+                  {/* Bloco de Informações Técnicas */}
+                  <div className="grid grid-cols-1 gap-1 text-[10px] sm:text-[12px] text-gray-400 font-mono uppercase leading-tight">
+                    <div className="flex justify-between border-b border-gray-50 pb-1">
+                      <span>Resolução:</span>
+                      <span className="text-gray-600">
+                        {photo.width && photo.height
+                          ? `${photo.width}x${photo.height}`
+                          : 'Original'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-50 pb-1">
+                      <span>Data/Hora:</span>
+                      <span className="text-gray-600">
+                        {photo.created_at ? (
+                          <>
+                            {new Date(photo.created_at).toLocaleDateString(
+                              'pt-BR'
+                            )}{' '}
+                            {new Date(photo.created_at).toLocaleTimeString(
+                              'pt-BR',
+                              {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              }
+                            )}
+                          </>
+                        ) : (
+                          '--/--/--'
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Formato:</span>
+                      <span className="text-gray-600">
+                        {photo.format ||
+                          photo.filename?.split('.').pop()?.toUpperCase() ||
+                          'JPG'}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Botão de Ação */}
                   {renderCartButton(photo)}
                 </div>
               </div>

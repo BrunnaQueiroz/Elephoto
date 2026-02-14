@@ -16,8 +16,11 @@ export interface Photo {
   url: string;
   thumbnail_url: string;
   price: number;
-  filename?: string; // Opcional
-  created_at?: string; // Opcional
+  filename?: string;
+  created_at?: string | number;
+  width?: string;
+  height?: string;
+  format: string;
 }
 
 // Tipo para o Cartão (Token) - Caso precise no futuro
