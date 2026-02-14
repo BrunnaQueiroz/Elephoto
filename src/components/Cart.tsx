@@ -72,37 +72,55 @@ export function Cart({ isOpen, onClose }: CartProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              {cart.map(photo => (
-                <div
-                  key={photo.id}
-                  className="flex gap-4 bg-gray-50 rounded-xl p-3 border border-gray-100"
-                >
-                  <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
-                    <img
-                      src={photo.thumbnail_url}
-                      alt="Foto"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium">
-                        Foto Alta Resolução
-                      </p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        R$ {Number(photo.price).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removeFromCart(photo.id)}
-                    disabled={isProcessing}
-                    className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all self-center text-gray-400 hover:text-red-500"
+              {cart.map((photo, index) => {
+                // Cálculo lógico para exibição individual
+                const posicao = index + 1;
+                const precoBase = 6.9;
+                let precoExibicao = 0;
+
+                if (posicao >= 6) {
+                  precoExibicao = 1.99;
+                } else {
+                  precoExibicao = precoBase * Math.pow(0.8, index);
+                }
+
+                return (
+                  <div
+                    key={photo.id}
+                    className="flex gap-4 bg-gray-50 rounded-xl p-3 border border-gray-100 animate-in fade-in slide-in-from-right-4 duration-300"
                   >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
+                    <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
+                      <img
+                        src={photo.thumbnail_url}
+                        alt="Foto"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-between py-1">
+                      <div>
+                        <p className="text-xs text-blue-600 font-semibold mb-0.5">
+                          {posicao}ª Foto — Desconto Progressivo
+                        </p>
+                        <p className="text-sm text-gray-500 font-medium">
+                          Foto Alta Resolução
+                        </p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          R$ {precoExibicao.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => removeFromCart(photo.id)}
+                      disabled={isProcessing}
+                      className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all self-center text-gray-400 hover:text-red-500"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
