@@ -30,3 +30,24 @@
     transform: translateY(0); /* Termina na posição original */
   }
 }
+
+@keyframes pass-cart {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(500%);
+  }
+}
+
+/* A classe sozinha não tem animação por padrão */
+.animate-pass-cart {
+  transform: translateX(-110%);
+  display: none; /* Esconde para garantir que não apareça parado */
+}
+
+/* A animação só é aplicada e iniciada DO ZERO no hover do botão */
+.group:hover .animate-pass-cart {
+  display: block;
+  animation: pass-cart 3s linear infinite;
+}
