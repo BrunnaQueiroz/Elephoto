@@ -294,9 +294,6 @@ export function GalleryPage() {
           >
             <div className="text-white text-center">
               <p className="text-sm opacity-70">Foto Digital</p>
-              <p className="text-xl font-bold">
-                R$ {Number(selectedPhoto.price).toFixed(2)}
-              </p>
             </div>
             {renderCartButton(selectedPhoto, true)}
           </div>
