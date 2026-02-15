@@ -108,7 +108,6 @@ export function HomePage() {
       {/* HEADER */}
 
       <header className="px-6 py-8 flex max-w-6xl mx-auto w-full justify-center sm:justify-start">
-        {/* LOGO INTERATIVO */}
         <div
           onClick={() => window.location.reload()}
           className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5 cursor-pointer group select-none"
@@ -117,7 +116,6 @@ export function HomePage() {
           <img
             src="/logo.png"
             alt="Elephoto"
-            // Reduzi um pouco a logo no mobile (h-16) para não ocupar meia tela
             className="h-16 sm:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-110"
           />
           <span className="text-xl sm:text-2xl font-medium text-gray-800 tracking-tight group-hover:text-gray-600 transition-colors text-center">
