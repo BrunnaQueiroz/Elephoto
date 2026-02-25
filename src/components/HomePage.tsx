@@ -117,11 +117,7 @@ export function HomePage() {
         </div>
       )}
 
-      {/* =========================================
-          DOBRA 1: OCUPA 100% DA TELA (min-h-screen)
-          ========================================= */}
-      {/* Adicionado o 'relative' na div abaixo para ancorar a setinha */}
-      <div className="min-h-screen flex flex-col w-full relative">
+      <div className="min-h-[100dvh] flex flex-col w-full relative">
         {/* HEADER */}
         <header className="relative z-10 px-6 py-8 flex max-w-6xl mx-auto w-full justify-center sm:justify-start">
           <div
@@ -207,27 +203,24 @@ export function HomePage() {
         </main>
 
         {/* --- INDICADOR DE SCROLL ANIMADO --- */}
-        <div
-          onClick={() =>
-            window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })
-          }
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center text-slate-400 hover:text-slate-800 transition-colors cursor-pointer animate-bounce"
-        >
-          <span className="text-[10px] uppercase tracking-widest font-semibold mb-1">
-            Descubra mais
-          </span>
-          <ChevronDown className="w-6 h-6" />
+        <div className="absolute bottom-8 inset-x-0 flex justify-center z-20 pointer-events-none">
+          <div
+            onClick={() =>
+              window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })
+            }
+            className="flex flex-col items-center text-slate-400 hover:text-slate-800 transition-colors cursor-pointer animate-bounce pointer-events-auto"
+          >
+            <span className="text-[10px] uppercase tracking-widest font-semibold mb-1">
+              Descubra mais
+            </span>
+            <ChevronDown className="w-6 h-6" />
+          </div>
         </div>
       </div>
 
-      {/* =========================================
-          DOBRA 2 E DIANTE: ROLAGEM DA PÁGINA
-          ========================================= */}
-      {/* --- NOVA SEÇÃO: QUEM SOMOS E PILARES --- */}
+      {/* QUEM SOMOS E PILARES */}
       <section className="w-full max-w-6xl mx-auto py-16 px-6 mb-10 mt-10">
-        {/* Parte 1: Narrativa e Imagem (Split Screen) */}
         <div className="flex flex-col md:flex-row items-center gap-12 mb-20">
-          {/* Texto Narrativo (Esquerda) */}
           <div className="flex-1 space-y-6 text-left animate-in slide-in-from-left duration-700">
             <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight">
               Quem Somos
@@ -256,7 +249,6 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Parte 2: Nossos Pilares (Agora em um Card Destacado) */}
         <RevealOnScroll>
           <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-16 mb-10 relative overflow-hidden">
             <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight text-center mb-14">

@@ -17,10 +17,10 @@ export function RevealOnScroll({
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          observer.disconnect(); // Anima só uma vez e para de observar (melhora a performance)
+          observer.disconnect();
         }
       },
-      { threshold: 0.15 } // Dispara quando 15% do elemento aparecer na tela
+      { threshold: 0.15 }
     );
 
     if (ref.current) {
