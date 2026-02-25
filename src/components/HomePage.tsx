@@ -1,7 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
-import { Shield, Camera, Zap, CheckCircle, Download, Key } from 'lucide-react';
+import {
+  Shield,
+  Camera,
+  Zap,
+  CheckCircle,
+  Download,
+  Key,
+  Rocket,
+  Eye,
+  HeartHandshake,
+  ChevronDown, // <-- Ícone novo importado aqui!
+} from 'lucide-react';
+import { RevealOnScroll } from './RevealOnScroll';
 
 export function HomePage() {
   const { setCurrentView, cart, clearCart } = useApp();
@@ -81,7 +93,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
+    <div className="bg-white font-sans text-gray-900 flex flex-col">
       {/* MODAL DE SUCESSO */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
@@ -105,155 +117,268 @@ export function HomePage() {
         </div>
       )}
 
-      {/* HEADER */}
-
-      <header className="px-6 py-8 flex max-w-6xl mx-auto w-full justify-center sm:justify-start">
-        <div
-          onClick={() => window.location.reload()}
-          className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5 cursor-pointer group select-none"
-          title="Recarregar página"
-        >
-          <img
-            src="/logo.png"
-            alt="Elephoto"
-            className="h-16 sm:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-110"
-          />
-          <span className="text-xl sm:text-2xl font-medium text-gray-800 tracking-tight group-hover:text-gray-600 transition-colors text-center">
-            Elephoto
-          </span>
-        </div>
-      </header>
-
-      {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col items-center justify-start pt-12 px-4 text-center pb-20">
-        <div className="relative w-full max-w-3xl mx-auto">
-          <img
-            src="/login.png"
-            alt="Animais segurando cartão"
-            className="w-full h-auto object-contain pointer-events-none select-none"
-            draggable={false}
-          />
-
-          {/* Container principal de login */}
-          <div className="absolute w-[60%] left-1/2 -translate-x-1/2 top-[45%] bottom-[5%] flex flex-col items-center justify-center px-2 sm:px-8">
-            {!showInput ? (
-              <button
-                onClick={() => setShowInput(true)}
-                // Removi o max-w-xs e reduzi py-3 para py-2 em telas pequenas
-                className="bg-[#0f172a] flex items-center justify-center gap-2 sm:gap-3 text-white px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-lg font-medium hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl w-full"
-              >
-                <Key className="w-4 h-4 sm:w-5 h-5" />
-                Acessar Minhas Fotos
-              </button>
-            ) : (
-              // --- FORMULÁRIO ESTILO CARD ---
-              <form
-                onSubmit={handleSubmit}
-                className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in zoom-in duration-300"
-              >
-                <input
-                  type="text"
-                  value={code}
-                  onChange={handleCodeChange}
-                  maxLength={7}
-                  placeholder="Ex: ABC1234"
-                  className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text-sm sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light tracking-widest font-mono uppercase"
-                  autoFocus
-                />
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowInput(false)}
-                    className="flex-1 bg-gray-100 text-gray-600 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    // Trava o botão "Entrar" se o código não tiver exatamente 7 caracteres
-                    disabled={code.length !== 7}
-                    className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Entrar
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* LINK DE FOTÓGRAFO */}
-            <button
-              onClick={() => setCurrentView('admin')}
-              className="text-gray-500 hover:text-gray-900 text-xs sm:text-sm transition-colors mt-2 sm:mt-4 underline decoration-transparent hover:decoration-gray-400 underline-offset-4"
-            >
-              Sou fotógrafo(a)
-            </button>
+      {/* =========================================
+          DOBRA 1: OCUPA 100% DA TELA (min-h-screen)
+          ========================================= */}
+      {/* Adicionado o 'relative' na div abaixo para ancorar a setinha */}
+      <div className="min-h-screen flex flex-col w-full relative">
+        {/* HEADER */}
+        <header className="relative z-10 px-6 py-8 flex max-w-6xl mx-auto w-full justify-center sm:justify-start">
+          <div
+            onClick={() => window.location.reload()}
+            className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5 cursor-pointer group select-none"
+            title="Recarregar página"
+          >
+            <img
+              src="/logo.png"
+              alt="Elephoto"
+              className="h-16 sm:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-110"
+            />
+            <span className="text-xl sm:text-2xl font-medium text-gray-800 tracking-tight group-hover:text-gray-600 transition-colors text-center">
+              Elephoto
+            </span>
           </div>
-        </div>
-      </main>
-      <div className="max-w-4xl mx-auto text-center space-y-8 animate-in slide-in-from-bottom-4 duration-700 bg-slate-50 py-16 px-6 sm:px-12 rounded-3xl border border-slate-100 shadow-sm">
-        <h1 className="text-4xl md:text-6xl font-light text-gray-900 tracking-tight leading-tight">
-          Acesse suas fotografias com <br />
-          <span className="font-semibold block mt-2">
-            segurança e praticidade
-          </span>
-        </h1>
+        </header>
 
-        <p className="text-gray-500 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-          Suas fotos profissionais em um só lugar. Selecione, compre e receba
-          suas imagens de forma simples e segura.
-        </p>
+        {/* MAIN CONTENT (Login) */}
+        <main className="flex-1 flex flex-col items-center justify-center px-4 text-center pb-20 md:pb-32 -mt-16 md:-mt-28">
+          <div className="relative w-full max-w-3xl mx-auto">
+            <img
+              src="/login.png"
+              alt="Animais segurando cartão"
+              className="w-full h-auto object-contain pointer-events-none select-none"
+              draggable={false}
+            />
+
+            {/* Container principal de login */}
+            <div className="absolute w-[60%] left-1/2 -translate-x-1/2 top-[45%] bottom-[5%] flex flex-col items-center justify-center px-2 sm:px-8">
+              {!showInput ? (
+                <button
+                  onClick={() => setShowInput(true)}
+                  className="bg-[#0f172a] flex items-center justify-center gap-2 sm:gap-3 text-white px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-lg font-medium hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl w-full"
+                >
+                  <Key className="w-4 h-4 sm:w-5 h-5" />
+                  Acessar Minhas Fotos
+                </button>
+              ) : (
+                // --- FORMULÁRIO ESTILO CARD ---
+                <form
+                  onSubmit={handleSubmit}
+                  className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in zoom-in duration-300"
+                >
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={handleCodeChange}
+                    maxLength={7}
+                    placeholder="Ex: ABC1234"
+                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text-sm sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light tracking-widest font-mono uppercase"
+                    autoFocus
+                  />
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowInput(false)}
+                      className="flex-1 bg-gray-100 text-gray-600 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={code.length !== 7}
+                      className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Entrar
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* LINK DE FOTÓGRAFO */}
+              <button
+                onClick={() => setCurrentView('admin')}
+                className="text-gray-500 hover:text-gray-900 text-xs sm:text-sm transition-colors mt-2 sm:mt-4 underline decoration-transparent hover:decoration-gray-400 underline-offset-4"
+              >
+                Sou fotógrafo(a)
+              </button>
+            </div>
+          </div>
+        </main>
+
+        {/* --- INDICADOR DE SCROLL ANIMADO --- */}
+        <div
+          onClick={() =>
+            window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })
+          }
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center text-slate-400 hover:text-slate-800 transition-colors cursor-pointer animate-bounce"
+        >
+          <span className="text-[10px] uppercase tracking-widest font-semibold mb-1">
+            Descubra mais
+          </span>
+          <ChevronDown className="w-6 h-6" />
+        </div>
       </div>
 
-      {/* FEATURES SECTION (Rodapé Cinza Claro) */}
-      <div className="bg-gray-50 border-t border-gray-100 py-16 px-4">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-gray-700">
-              <Shield className="w-6 h-6" />
+      {/* =========================================
+          DOBRA 2 E DIANTE: ROLAGEM DA PÁGINA
+          ========================================= */}
+      {/* --- NOVA SEÇÃO: QUEM SOMOS E PILARES --- */}
+      <section className="w-full max-w-6xl mx-auto py-16 px-6 mb-10 mt-10">
+        {/* Parte 1: Narrativa e Imagem (Split Screen) */}
+        <div className="flex flex-col md:flex-row items-center gap-12 mb-20">
+          {/* Texto Narrativo (Esquerda) */}
+          <div className="flex-1 space-y-6 text-left animate-in slide-in-from-left duration-700">
+            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight">
+              Quem Somos
+            </h2>
+            <div className="space-y-4 text-gray-600 text-lg leading-relaxed font-light">
+              <p>
+                Na Elephoto, somos os guardiões digitais das suas memórias mais
+                preciosas. Nascemos da paixão por conectar momentos únicos a
+                quem os viveu, usando a tecnologia para tornar o acesso à
+                fotografia profissional simples, mágico e seguro.
+              </p>
+              <p>
+                Acreditamos que cada clique conta uma história e merece ser
+                preservado e entregue com o máximo cuidado e qualidade.
+              </p>
             </div>
-            <h3 className="font-semibold text-gray-900 text-lg">
-              Acesso Privado
-            </h3>
-            <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
-              Suas fotos são exclusivas e acessíveis apenas com seu código
-              pessoal.
-            </p>
           </div>
 
-          <div className="flex flex-col items-center space-y-4">
-            <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-gray-700">
-              <Camera className="w-6 h-6" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-lg">
-              Alta Qualidade
-            </h3>
-            <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
-              Receba suas fotografias em alta resolução, prontas para impressão
-              e redes sociais.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center space-y-4">
-            <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-gray-700">
-              <Zap className="w-6 h-6" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-lg">
-              Pagamento Fácil
-            </h3>
-            <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
-              Pague via Pix ou cartão de crédito de forma rápida, transparente e
-              segura.
-            </p>
+          {/* Imagem (Direita) */}
+          <div className="flex-1 w-full animate-in slide-in-from-right duration-700 delay-150">
+            <img
+              src="/quemsomos.png"
+              alt="Elefante e ovelhinhas vendo álbum de fotos mágicas"
+              className="w-full h-auto object-cover rounded-[2rem] shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-1"
+            />
           </div>
         </div>
 
-        <div className="text-center mt-16 pt-8 border-t border-gray-200">
-          <p className="text-gray-400 text-xs">
-            © 2026 Elephoto. Todos os direitos reservados.
+        {/* Parte 2: Nossos Pilares (Agora em um Card Destacado) */}
+        <RevealOnScroll>
+          <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-16 mb-10 relative overflow-hidden">
+            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight text-center mb-14">
+              Nossos Pilares
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+              {/* Missão */}
+              <div className="flex flex-col items-center space-y-4 group animate-in fade-in zoom-in duration-500 delay-100">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-700 group-hover:bg-slate-100 group-hover:scale-110 transition-all duration-300 shadow-sm border border-slate-100">
+                  <Rocket className="w-8 h-8" />
+                </div>
+                <h3 className="font-semibold text-gray-900 text-xl tracking-tight">
+                  Missão
+                </h3>
+                <p className="text-gray-500 leading-relaxed max-w-[16rem] mx-auto font-light">
+                  Facilitar o acesso a memórias fotográficas de alta qualidade
+                  de forma rápida, encantadora e segura.
+                </p>
+              </div>
+
+              {/* Visão */}
+              <div className="flex flex-col items-center space-y-4 group animate-in fade-in zoom-in duration-500 delay-200">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-700 group-hover:bg-slate-100 group-hover:scale-110 transition-all duration-300 shadow-sm border border-slate-100">
+                  <Eye className="w-8 h-8" />
+                </div>
+                <h3 className="font-semibold text-gray-900 text-xl tracking-tight">
+                  Visão
+                </h3>
+                <p className="text-gray-500 leading-relaxed max-w-[16rem] mx-auto font-light">
+                  Ser a plataforma referência em entrega de fotografia digital,
+                  conectando corações às suas melhores lembranças.
+                </p>
+              </div>
+
+              {/* Valores */}
+              <div className="flex flex-col items-center space-y-4 group animate-in fade-in zoom-in duration-500 delay-300">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-700 group-hover:bg-slate-100 group-hover:scale-110 transition-all duration-300 shadow-sm border border-slate-100">
+                  <HeartHandshake className="w-8 h-8" />
+                </div>
+                <h3 className="font-semibold text-gray-900 text-xl tracking-tight">
+                  Valores
+                </h3>
+                <ul className="text-gray-500 leading-relaxed max-w-[16rem] mx-auto font-light list-none space-y-1">
+                  <li>Segurança e Privacidade</li>
+                  <li>Qualidade Impecável</li>
+                  <li>Encantamento do Cliente</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </RevealOnScroll>
+      </section>
+
+      {/* BLOCO DE MARKETING */}
+      <RevealOnScroll>
+        <div className="max-w-4xl mx-auto text-center space-y-8 animate-in slide-in-from-bottom-4 duration-700 bg-slate-50 py-16 px-6 sm:px-12 rounded-3xl border border-slate-100 shadow-sm mb-20">
+          <h1 className="text-4xl md:text-6xl font-light text-gray-900 tracking-tight leading-tight">
+            Acesse suas fotografias com <br />
+            <span className="font-semibold block mt-2">
+              segurança e praticidade
+            </span>
+          </h1>
+
+          <p className="text-gray-500 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            Suas fotos profissionais em um só lugar. Selecione, compre e receba
+            suas imagens de forma simples e segura.
           </p>
         </div>
-      </div>
+      </RevealOnScroll>
+
+      {/* FEATURES SECTION (Rodapé Cinza Claro) */}
+      <RevealOnScroll>
+        <div className="bg-gray-50 border-t border-gray-100 py-16 px-4">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-gray-700">
+                <Shield className="w-6 h-6" />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-lg">
+                Acesso Privado
+              </h3>
+              <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
+                Suas fotos são exclusivas e acessíveis apenas com seu código
+                pessoal.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-gray-700">
+                <Camera className="w-6 h-6" />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-lg">
+                Alta Qualidade
+              </h3>
+              <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
+                Receba suas fotografias em alta resolução, prontas para
+                impressão e redes sociais.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center text-gray-700">
+                <Zap className="w-6 h-6" />
+              </div>
+              <h3 className="font-semibold text-gray-900 text-lg">
+                Pagamento Fácil
+              </h3>
+              <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
+                Pague via Pix ou cartão de crédito de forma rápida, transparente
+                e segura.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center mt-16 pt-8 border-t border-gray-200">
+            <p className="text-gray-400 text-xs">
+              © 2026 Elephoto. Todos os direitos reservados.
+            </p>
+          </div>
+        </div>
+      </RevealOnScroll>
     </div>
   );
 }
