@@ -227,17 +227,42 @@ export function HomePage() {
             </h2>
             <div className="space-y-4 text-gray-600 text-lg leading-relaxed font-light">
               <p>
-                Na Elephoto, somos os guardiões digitais das suas memórias mais
-                preciosas. Nascemos da paixão por conectar momentos únicos a
-                quem os viveu, usando a tecnologia para tornar o acesso à
-                fotografia profissional simples, mágico e seguro.
+                A Elephoto nasce do encontro entre o instante vivido e o olhar
+                sensível de quem sabe transformá-lo em memória.
               </p>
               <p>
-                Acreditamos que cada clique conta uma história e merece ser
-                preservado e entregue com o máximo cuidado e qualidade.
+                Conectamos você aos seus momentos felizes e a fotógrafos que os
+                eternizam com arte, técnica e originalidade, de forma simples,
+                segura e acessível.
+              </p>
+              <p>
+                E aos fotógrafos, abrimos caminhos: oferecemos oportunidades,
+                estrutura e organização, para que possam dedicar-se ao que
+                realmente importa: registrar histórias que merecem ser
+                lembradas.
               </p>
             </div>
           </div>
+          {/* SEGUNDA OPÇÃO */}
+          {/* <div className="flex-1 space-y-6 text-left animate-in slide-in-from-left duration-700">
+            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight">
+              Quem Somos
+            </h2>
+            <div className="space-y-4 text-gray-600 text-lg leading-relaxed font-light">
+              <p>
+                A Elephoto conecta você aos seus momentos felizes e aos
+                fotógrafos capazes de eternizá-los com talento, sensibilidade e
+                excelência técnica. Transformamos instantes em memórias
+                memoráveis com simplicidade, segurança e acessibilidade.
+              </p>
+              <p>
+                Para os fotógrafos, criamos um ambiente de oportunidades e bons
+                encontros, permitindo que concentrem sua energia na arte de
+                registrar, enquanto assumimos a estrutura, a gestão e a
+                organização do processo.
+              </p>
+            </div>
+          </div> */}
 
           {/* Imagem (Direita) */}
           <div className="flex-1 w-full animate-in slide-in-from-right duration-700 delay-150">
@@ -248,7 +273,34 @@ export function HomePage() {
             />
           </div>
         </div>
+        {/* PARA FOTÓGRAFOS */}
+        <section className="w-full max-w-6xl mx-auto px-6 mb-20">
+          <RevealOnScroll>
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-[2.5rem] border border-slate-100 p-8 md:p-16 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-pink-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
+              <div className="relative z-10">
+                <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight mb-6">
+                  É fotógrafo(a)? Junte-se à Elephoto
+                </h2>
+                <p className="text-gray-600 text-lg leading-relaxed font-light max-w-2xl mx-auto mb-10">
+                  Simplifique a entrega dos seus trabalhos criando galerias
+                  seguras com código para seus clientes e atraia novos olhares
+                  montando o seu próprio portfólio público. Tudo em um só lugar.
+                </p>
+
+                <button
+                  onClick={() => setCurrentView('admin')}
+                  className="inline-flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-gray-800 text-white px-8 py-4 rounded-xl text-lg font-medium transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
+                >
+                  <Camera className="w-6 h-6" />
+                  Conhecer Área do Fotógrafo
+                </button>
+              </div>
+            </div>
+          </RevealOnScroll>
+        </section>
         <RevealOnScroll>
           <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-16 mb-10 relative overflow-hidden">
             <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight text-center mb-14">
