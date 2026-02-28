@@ -271,7 +271,7 @@ export function AdminPage() {
             </button>
             <button
               type="button"
-              onClick={() => setCurrentView('home')}
+              onClick={() => setCurrentView('photographerMenu')}
               className="w-full text-gray-500 text-sm hover:text-gray-700 mt-2"
             >
               Voltar para Home

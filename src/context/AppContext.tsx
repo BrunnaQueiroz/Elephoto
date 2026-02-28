@@ -7,7 +7,12 @@ import React, {
 } from 'react';
 import { Photo } from '../lib/supabase';
 
-type View = 'home' | 'gallery' | 'admin';
+type View =
+  | 'home'
+  | 'gallery'
+  | 'admin'
+  | 'photographerMenu'
+  | 'portfolioUpload';
 
 interface AppContextType {
   currentView: View;

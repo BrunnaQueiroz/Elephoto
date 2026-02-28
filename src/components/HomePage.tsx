@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { PhotographerMenu } from './components/PhotographerMenu';
 import { supabase } from '../lib/supabase';
 import {
   Shield,
@@ -87,7 +88,7 @@ export function HomePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    clearCart(); // <-- ZERA QUALQUER LIXO ANTERIOR AQUI
+    clearCart();
     localStorage.setItem('elephoto_code', code);
     setCurrentView('gallery');
   };
@@ -281,8 +282,14 @@ export function HomePage() {
               <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-pink-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
               <div className="relative z-10">
+                <img
+                  className="max-w-xs w-8/12 h-auto m-auto object-contain"
+                  src="/fotografo.jpeg"
+                  alt="ovelha segurando câmera"
+                />
+
                 <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight mb-6">
-                  É fotógrafo(a)? Junte-se à Elephoto
+                  É fotógrafo(a)? Junte-se ao Elephoto
                 </h2>
                 <p className="text-gray-600 text-lg leading-relaxed font-light max-w-2xl mx-auto mb-10">
                   Simplifique a entrega dos seus trabalhos criando galerias
@@ -291,7 +298,7 @@ export function HomePage() {
                 </p>
 
                 <button
-                  onClick={() => setCurrentView('admin')}
+                  onClick={() => setCurrentView('photographerMenu')}
                   className="inline-flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-gray-800 text-white px-8 py-4 rounded-xl text-lg font-medium transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
                 >
                   <Camera className="w-6 h-6" />

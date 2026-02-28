@@ -2,6 +2,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { HomePage } from './components/HomePage';
 import { GalleryPage } from './components/GalleryPage';
 import { AdminPage } from './components/AdminPage';
+import { PhotographerMenu } from './components/PhotographerMenu';
 
 // Componente interno que consome o contexto e decide qual tela mostrar
 function AppContent() {
@@ -13,6 +14,7 @@ function AppContent() {
       {currentView === 'home' && <HomePage />}
       {currentView === 'gallery' && <GalleryPage />}
       {currentView === 'admin' && <AdminPage />}
+      {currentView === 'photographerMenu' && <PhotographerMenu />}
     </div>
   );
 }
