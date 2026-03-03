@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { PhotographerMenu } from './components/PhotographerMenu';
 import { supabase } from '../lib/supabase';
 import {
   Shield,

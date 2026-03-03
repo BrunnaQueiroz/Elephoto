@@ -3,6 +3,7 @@ import { HomePage } from './components/HomePage';
 import { GalleryPage } from './components/GalleryPage';
 import { AdminPage } from './components/AdminPage';
 import { PhotographerMenu } from './components/PhotographerMenu';
+import { PortfolioUpload } from './components/PortfolioUpload';
 
 // Componente interno que consome o contexto e decide qual tela mostrar
 function AppContent() {
@@ -15,6 +16,7 @@ function AppContent() {
       {currentView === 'gallery' && <GalleryPage />}
       {currentView === 'admin' && <AdminPage />}
       {currentView === 'photographerMenu' && <PhotographerMenu />}
+      {currentView === 'portfolioUpload' && <PortfolioUpload />}
     </div>
   );
 }
