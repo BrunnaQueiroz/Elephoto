@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
+import { HowItWorks } from './HowItWorks';
 import {
   Shield,
   Camera,
@@ -377,6 +378,8 @@ export function HomePage() {
           </div>
         </RevealOnScroll>
       </section>
+      {/* COMO FUNCIONA */}
+      <HowItWorks />
 
       {/* BLOCO DE MARKETING */}
       <RevealOnScroll>

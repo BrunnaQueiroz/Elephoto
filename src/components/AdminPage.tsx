@@ -359,7 +359,10 @@ export function AdminPage() {
             <span className="font-semibold text-gray-900">Elephoto Admin</span>
           </div>
           <button
-            onClick={() => setIsAuthenticated(false)}
+            onClick={() => {
+              setIsAuthenticated(false);
+              setCurrentView('home');
+            }}
             className="text-gray-500 hover:text-red-600 flex items-center gap-2 text-sm transition-colors"
           >
             <LogOut className="w-4 h-4" /> Sair
@@ -608,7 +611,10 @@ export function AdminPage() {
           </span>
         </div>
         <button
-          onClick={() => setIsAuthenticated(false)}
+          onClick={() => {
+            setIsAuthenticated(false);
+            setCurrentView('home');
+          }}
           className="text-gray-500 hover:text-red-600 flex items-center gap-2 text-sm transition-colors"
         >
           <LogOut className="w-4 h-4" /> Sair
