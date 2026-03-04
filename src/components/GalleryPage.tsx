@@ -25,7 +25,7 @@ export function GalleryPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [albumCode, setAlbumCode] = useState('');
 
-  // Controla qual foto está aberta no modal
+  // Controla qual foto está aberta no modal (aceita fotos da galeria ou públicas)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
   // --- ESTADOS E REFS DA VITRINE "VOCÊ TAMBÉM PODE GOSTAR" ---
@@ -102,7 +102,6 @@ export function GalleryPage() {
     }
   };
 
-  // --- LÓGICA DO CARROSSEL DE UPSELL ---
   const availableUpsells = publicPhotos.filter(
     publicPhoto => !cart.some(cartItem => cartItem.id === publicPhoto.id)
   );
@@ -142,17 +141,22 @@ export function GalleryPage() {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Só inicia arraste se clicar com botão esquerdo
+    if (e.button !== 0) return;
     setIsCarouselPaused(true);
     isDragging.current = true;
     startX.current = e.pageX - scrollContainerRef.current!.offsetLeft;
     scrollLeftStart.current = scrollContainerRef.current!.scrollLeft;
+
+    // Impede seleção de texto durante o arraste
+    e.preventDefault();
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging.current || !scrollContainerRef.current) return;
     e.preventDefault();
     const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (startX.current - x) * 2;
+    const walk = (startX.current - x) * 1.5; // Ajuste de velocidade do arraste
     scrollContainerRef.current.scrollLeft = scrollLeftStart.current + walk;
   };
 
@@ -171,7 +175,7 @@ export function GalleryPage() {
       <button
         onClick={e => {
           e.stopPropagation();
-          // Corrigido para if/else para evitar erro de ESLint (no-unused-expressions)
+
           if (selected) {
             removeFromCart(photo.id);
           } else {
@@ -343,7 +347,6 @@ export function GalleryPage() {
           </div>
         )}
 
-        {/* --- NOVA SEÇÃO: CARROSSEL "VOCÊ TAMBÉM PODE GOSTAR" (Agora na Galeria!) --- */}
         {availableUpsells.length > 0 && (
           <div className="mt-16 pt-10 border-t border-gray-200 relative group animate-in fade-in duration-700">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-wide">
@@ -351,7 +354,7 @@ export function GalleryPage() {
               Você também pode gostar
             </h2>
 
-            {/* SETA ESQUERDA (Aparece no hover do desktop) */}
+            {/* SETA ESQUERDA */}
             <button
               onClick={() => scrollByAmount(-200)}
               onMouseEnter={() => setIsCarouselPaused(true)}
@@ -378,13 +381,20 @@ export function GalleryPage() {
                   key={photo.id}
                   className="min-w-[160px] max-w-[160px] md:min-w-[200px] md:max-w-[200px] flex-shrink-0 flex flex-col gap-3 group/item select-none"
                 >
-                  <div className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-200 shadow-sm group-hover/item:shadow-md transition-shadow relative pointer-events-none">
+                  <div
+                    className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-200 shadow-sm group-hover/item:shadow-md transition-shadow relative cursor-zoom-in"
+                    onClick={() => setSelectedPhoto(photo)}
+                  >
                     <img
                       src={photo.thumbnail_url}
                       className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
                       alt="Foto Extra"
                       draggable={false}
                     />
+                    {/* Overlay de zoom no hover para dar feedback visual */}
+                    <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover/item:opacity-100">
+                      <Maximize2 className="text-white w-6 h-6 drop-shadow-lg" />
+                    </div>
                   </div>
 
                   <button
@@ -397,7 +407,7 @@ export function GalleryPage() {
               ))}
             </div>
 
-            {/* SETA DIREITA (Aparece no hover do desktop) */}
+            {/* SETA DIREITA */}
             <button
               onClick={() => scrollByAmount(200)}
               onMouseEnter={() => setIsCarouselPaused(true)}
@@ -411,6 +421,7 @@ export function GalleryPage() {
       </main>
 
       {/* MODAL / LIGHTBOX (VISUALIZAÇÃO AMPLIADA) */}
+
       {selectedPhoto && (
         <div
           className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
