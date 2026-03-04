@@ -192,12 +192,12 @@ export function HomePage() {
               )}
 
               {/* LINK DE FOTÓGRAFO */}
-              <button
+              {/* <button
                 onClick={() => setCurrentView('admin')}
                 className="text-gray-500 hover:text-gray-900 text-xs sm:text-sm transition-colors mt-2 sm:mt-4 underline decoration-transparent hover:decoration-gray-400 underline-offset-4"
               >
                 Sou fotógrafo(a)
-              </button>
+              </button> */}
             </div>
           </div>
         </main>
@@ -297,7 +297,8 @@ export function HomePage() {
                 </p>
 
                 <button
-                  onClick={() => setCurrentView('photographerMenu')}
+                  // onClick={() => setCurrentView('photographerMenu')}
+                  onClick={() => setCurrentView('admin')}
                   className="inline-flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-gray-800 text-white px-8 py-4 rounded-xl text-lg font-medium transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
                 >
                   <Camera className="w-6 h-6" />

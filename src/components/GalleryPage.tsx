@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 import { useApp } from '../context/AppContext';
 import { supabase, Photo } from '../lib/supabase';
@@ -10,6 +10,9 @@ import {
   Loader2,
   X,
   Maximize2,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Cart } from './Cart';
 
@@ -22,12 +25,39 @@ export function GalleryPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [albumCode, setAlbumCode] = useState('');
 
-  //  Controla qual foto está aberta no modal
+  // Controla qual foto está aberta no modal
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
+  // --- ESTADOS E REFS DA VITRINE "VOCÊ TAMBÉM PODE GOSTAR" ---
+  const [publicPhotos, setPublicPhotos] = useState<Photo[]>([]);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
+  const startX = useRef(0);
+  const scrollLeftStart = useRef(0);
+  const isDragging = useRef(false);
+
+  // Busca as fotos do cliente e as fotos públicas
   useEffect(() => {
     fetchPhotos();
+    fetchPublicPhotos();
   }, []);
+
+  // Função para buscar as fotos públicas da vitrine
+  const fetchPublicPhotos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('is_public', true)
+        .limit(10);
+
+      if (data) {
+        setPublicPhotos(data);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar fotos públicas:', err);
+    }
+  };
 
   const fetchPhotos = async () => {
     try {
@@ -72,17 +102,81 @@ export function GalleryPage() {
     }
   };
 
+  // --- LÓGICA DO CARROSSEL DE UPSELL ---
+  const availableUpsells = publicPhotos.filter(
+    publicPhoto => !cart.some(cartItem => cartItem.id === publicPhoto.id)
+  );
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer || isCarouselPaused || availableUpsells.length === 0)
+      return;
+
+    let scrollAmount = scrollContainer.scrollLeft;
+    const scrollSpeed = 0.5;
+    let animationId: number;
+
+    const scroll = () => {
+      if (!scrollContainer) return;
+      scrollAmount += scrollSpeed;
+
+      if (
+        scrollAmount >=
+        scrollContainer.scrollWidth - scrollContainer.clientWidth
+      ) {
+        scrollAmount = 0;
+      }
+
+      scrollContainer.scrollLeft = scrollAmount;
+      animationId = requestAnimationFrame(scroll);
+    };
+
+    animationId = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(animationId);
+  }, [isCarouselPaused, availableUpsells.length]);
+
+  const scrollByAmount = (amount: number) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsCarouselPaused(true);
+    isDragging.current = true;
+    startX.current = e.pageX - scrollContainerRef.current!.offsetLeft;
+    scrollLeftStart.current = scrollContainerRef.current!.scrollLeft;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (startX.current - x) * 2;
+    scrollContainerRef.current.scrollLeft = scrollLeftStart.current + walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDragging.current = false;
+    setIsCarouselPaused(false);
+  };
+
+  // Verificação de itens no carrinho
   const isInCart = (photoId: string) => cart.some(p => p.id === photoId);
 
-  // Função auxiliar para evitar repetição no botão
+  // Função auxiliar para renderizar botões
   const renderCartButton = (photo: Photo, isLarge = false) => {
     const selected = isInCart(photo.id);
     return (
       <button
         onClick={e => {
-          e.stopPropagation(); // Evita fechar o modal ao clicar no botão
-          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-          selected ? removeFromCart(photo.id) : addToCart(photo);
+          e.stopPropagation();
+          // Corrigido para if/else para evitar erro de ESLint (no-unused-expressions)
+          if (selected) {
+            removeFromCart(photo.id);
+          } else {
+            addToCart(photo);
+          }
         }}
         className={`rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
           isLarge ? 'px-6 py-3 min-w-[200px]' : 'w-full py-3'
@@ -138,19 +232,15 @@ export function GalleryPage() {
   }
 
   const handleLogout = () => {
-    // Se tiver itens no carrinho, pede confirmação
     if (cart.length > 0) {
       const confirmLeave = window.confirm(
         'Se você sair agora, seu carrinho será esvaziado. Deseja mesmo sair?'
       );
-      if (!confirmLeave) return; // Cancela a saída se o usuário clicar em "Não"
+      if (!confirmLeave) return;
     }
 
-    // Limpa o carrinho e o código de acesso do usuário atual
     clearCart();
     localStorage.removeItem('elephoto_code');
-
-    // Volta para a tela inicial
     setCurrentView('home');
   };
 
@@ -218,9 +308,7 @@ export function GalleryPage() {
                 </div>
 
                 <div className="p-3 sm:p-4 flex flex-col flex-1 bg-white">
-                  {/* TROQUEI mb-4 por my-auto: Isso faz a lista ficar exatamente no meio do espaço vertical disponível */}
                   <ul className="my-auto space-y-2 sm:space-y-2.5 text-[10px] sm:text-xs text-gray-500 w-full py-2 sm:py-0">
-                    {/* ADICIONEI items-center text-center: No celular o texto empilhado fica centralizado no meio do card */}
                     <li className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
                       <span className="font-medium uppercase tracking-wider text-gray-400">
                         Resolução:
@@ -229,7 +317,6 @@ export function GalleryPage() {
                         ORIGINAL
                       </span>
                     </li>
-
                     <li className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
                       <span className="font-medium uppercase tracking-wider text-gray-400">
                         Data/Hora:
@@ -238,7 +325,6 @@ export function GalleryPage() {
                         09/02/2026 20:42
                       </span>
                     </li>
-
                     <li className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
                       <span className="font-medium uppercase tracking-wider text-gray-400">
                         Formato:
@@ -248,8 +334,6 @@ export function GalleryPage() {
                       </span>
                     </li>
                   </ul>
-
-                  {/* Adicionei um pt-3 (padding top) para o botão não colar no texto em telas muito curtas */}
                   <div className="mt-auto pt-3 sm:pt-0">
                     {renderCartButton(photo)}
                   </div>
@@ -258,15 +342,80 @@ export function GalleryPage() {
             ))}
           </div>
         )}
+
+        {/* --- NOVA SEÇÃO: CARROSSEL "VOCÊ TAMBÉM PODE GOSTAR" (Agora na Galeria!) --- */}
+        {availableUpsells.length > 0 && (
+          <div className="mt-16 pt-10 border-t border-gray-200 relative group animate-in fade-in duration-700">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-wide">
+              <Sparkles className="w-6 h-6 text-pink-500" />
+              Você também pode gostar
+            </h2>
+
+            {/* SETA ESQUERDA (Aparece no hover do desktop) */}
+            <button
+              onClick={() => scrollByAmount(-200)}
+              onMouseEnter={() => setIsCarouselPaused(true)}
+              onMouseLeave={() => setIsCarouselPaused(false)}
+              className="hidden md:flex absolute left-[-20px] top-[60%] z-10 items-center justify-center w-12 h-12 bg-white border border-gray-100 rounded-full shadow-lg text-pink-500 hover:bg-pink-50 transition-all opacity-0 group-hover:opacity-100"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            {/* CONTAINER ROLÁVEL */}
+            <div
+              ref={scrollContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUpOrLeave}
+              onMouseLeave={handleMouseUpOrLeave}
+              onTouchStart={() => setIsCarouselPaused(true)}
+              onTouchEnd={() => setIsCarouselPaused(false)}
+              className="flex gap-4 md:gap-6 overflow-x-auto pb-6 cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {availableUpsells.map(photo => (
+                <div
+                  key={photo.id}
+                  className="min-w-[160px] max-w-[160px] md:min-w-[200px] md:max-w-[200px] flex-shrink-0 flex flex-col gap-3 group/item select-none"
+                >
+                  <div className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-200 shadow-sm group-hover/item:shadow-md transition-shadow relative pointer-events-none">
+                    <img
+                      src={photo.thumbnail_url}
+                      className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                      alt="Foto Extra"
+                      draggable={false}
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => addToCart(photo)}
+                    className="w-full py-3 bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl hover:bg-pink-500 hover:text-white hover:border-pink-500 transition-colors flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" /> Adicionar
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* SETA DIREITA (Aparece no hover do desktop) */}
+            <button
+              onClick={() => scrollByAmount(200)}
+              onMouseEnter={() => setIsCarouselPaused(true)}
+              onMouseLeave={() => setIsCarouselPaused(false)}
+              className="hidden md:flex absolute right-[-20px] top-[60%] z-10 items-center justify-center w-12 h-12 bg-white border border-gray-100 rounded-full shadow-lg text-pink-500 hover:bg-pink-50 transition-all opacity-0 group-hover:opacity-100"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+        )}
       </main>
 
       {/* MODAL / LIGHTBOX (VISUALIZAÇÃO AMPLIADA) */}
       {selectedPhoto && (
         <div
           className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setSelectedPhoto(null)} // Fecha ao clicar no fundo
+          onClick={() => setSelectedPhoto(null)}
         >
-          {/* Botão Fechar */}
           <button
             onClick={() => setSelectedPhoto(null)}
             className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"
@@ -274,20 +423,17 @@ export function GalleryPage() {
             <X className="w-8 h-8" />
           </button>
 
-          {/* Imagem Grande */}
           <div
             className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center"
-            onClick={e => e.stopPropagation()} // Evita fechar ao clicar na imagem
+            onClick={e => e.stopPropagation()}
           >
             <img
-              // Tenta usar a URL original se existir, senão usa a thumbnail mesmo
               src={selectedPhoto.url || selectedPhoto.thumbnail_url}
               alt="Visualização ampliada"
               className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
             />
           </div>
 
-          {/* Barra de Ações Inferior */}
           <div
             className="mt-6 flex items-center gap-6"
             onClick={e => e.stopPropagation()}
