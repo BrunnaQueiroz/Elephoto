@@ -11,7 +11,7 @@ import {
   Rocket,
   Eye,
   HeartHandshake,
-  ChevronDown, // <-- Ícone novo importado aqui!
+  ChevronDown,
 } from 'lucide-react';
 import { RevealOnScroll } from './RevealOnScroll';
 
@@ -22,38 +22,45 @@ export function HomePage() {
   const [code, setCode] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // --- LÓGICA DE SUCESSO DO PAGAMENTO ---
+  // --- LÓGICA DE PAGAMENTO (SUCESSO E CANCELAMENTO) ---
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
+
+    // Se a compra foi concluída com sucesso
     if (query.get('success') === 'true') {
       setShowSuccessModal(true);
       window.history.replaceState({}, document.title, '/');
     }
-  }, []);
+
+    // Se o cliente cancelou ou clicou em "Back" no Stripe
+    if (query.get('canceled') === 'true') {
+      const savedCode = localStorage.getItem('elephoto_code');
+      if (savedCode) {
+        setCurrentView('gallery');
+        localStorage.setItem('elephoto_reopen_cart', 'true');
+      }
+      window.history.replaceState({}, document.title, '/');
+    }
+  }, [setCurrentView]);
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Pega o valor digitado e já transforma tudo em maiúsculo
     const rawValue = e.target.value.toUpperCase();
     let formattedCode = '';
 
-    // Passa caractere por caractere fazendo a validação
     for (let i = 0; i < rawValue.length; i++) {
       const char = rawValue[i];
 
       if (formattedCode.length < 3) {
-        // Nas 3 primeiras posições, só permite LETRAS de A a Z
         if (/[A-Z]/.test(char)) {
           formattedCode += char;
         }
       } else if (formattedCode.length < 7) {
-        // Da 4ª à 7ª posição, só permite NÚMEROS de 0 a 9
         if (/[0-9]/.test(char)) {
           formattedCode += char;
         }
       }
     }
 
-    // Atualiza a caixinha com o valor perfeito e filtrado
     setCode(formattedCode);
   };
 
@@ -157,7 +164,6 @@ export function HomePage() {
                   Acessar Minhas Fotos
                 </button>
               ) : (
-                // --- FORMULÁRIO ESTILO CARD ---
                 <form
                   onSubmit={handleSubmit}
                   className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in zoom-in duration-300"
@@ -190,14 +196,6 @@ export function HomePage() {
                   </div>
                 </form>
               )}
-
-              {/* LINK DE FOTÓGRAFO */}
-              {/* <button
-                onClick={() => setCurrentView('admin')}
-                className="text-gray-500 hover:text-gray-900 text-xs sm:text-sm transition-colors mt-2 sm:mt-4 underline decoration-transparent hover:decoration-gray-400 underline-offset-4"
-              >
-                Sou fotógrafo(a)
-              </button> */}
             </div>
           </div>
         </main>
@@ -243,26 +241,6 @@ export function HomePage() {
               </p>
             </div>
           </div>
-          {/* SEGUNDA OPÇÃO */}
-          {/* <div className="flex-1 space-y-6 text-left animate-in slide-in-from-left duration-700">
-            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight">
-              Quem Somos
-            </h2>
-            <div className="space-y-4 text-gray-600 text-lg leading-relaxed font-light">
-              <p>
-                A Elephoto conecta você aos seus momentos felizes e aos
-                fotógrafos capazes de eternizá-los com talento, sensibilidade e
-                excelência técnica. Transformamos instantes em memórias
-                memoráveis com simplicidade, segurança e acessibilidade.
-              </p>
-              <p>
-                Para os fotógrafos, criamos um ambiente de oportunidades e bons
-                encontros, permitindo que concentrem sua energia na arte de
-                registrar, enquanto assumimos a estrutura, a gestão e a
-                organização do processo.
-              </p>
-            </div>
-          </div> */}
 
           {/* Imagem (Direita) */}
           <div className="flex-1 w-full animate-in slide-in-from-right duration-700 delay-150">
@@ -273,6 +251,7 @@ export function HomePage() {
             />
           </div>
         </div>
+
         {/* PARA FOTÓGRAFOS */}
         <section className="w-full max-w-6xl mx-auto px-6 mb-20">
           <RevealOnScroll>
@@ -297,7 +276,6 @@ export function HomePage() {
                 </p>
 
                 <button
-                  // onClick={() => setCurrentView('photographerMenu')}
                   onClick={() => setCurrentView('admin')}
                   className="inline-flex items-center justify-center gap-3 bg-[#0f172a] hover:bg-gray-800 text-white px-8 py-4 rounded-xl text-lg font-medium transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
                 >
@@ -308,6 +286,7 @@ export function HomePage() {
             </div>
           </RevealOnScroll>
         </section>
+
         <RevealOnScroll>
           <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-16 mb-10 relative overflow-hidden">
             <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight text-center mb-14">
