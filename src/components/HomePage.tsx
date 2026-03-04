@@ -43,24 +43,30 @@ export function HomePage() {
     }
   }, [setCurrentView]);
 
+  // FUNÇÃO COM RESTRIÇÕES AO CÓDIGO
+  // const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const rawValue = e.target.value.toUpperCase();
+  //   let formattedCode = '';
+
+  //   for (let i = 0; i < rawValue.length; i++) {
+  //     const char = rawValue[i];
+
+  //     if (formattedCode.length < 3) {
+  //       if (/[A-Z]/.test(char)) {
+  //         formattedCode += char;
+  //       }
+  //     } else if (formattedCode.length < 7) {
+  //       if (/[0-9]/.test(char)) {
+  //         formattedCode += char;
+  //       }
+  //     }
+  //   }
+
+  //   setCode(formattedCode);
+  // };
+
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.toUpperCase();
-    let formattedCode = '';
-
-    for (let i = 0; i < rawValue.length; i++) {
-      const char = rawValue[i];
-
-      if (formattedCode.length < 3) {
-        if (/[A-Z]/.test(char)) {
-          formattedCode += char;
-        }
-      } else if (formattedCode.length < 7) {
-        if (/[0-9]/.test(char)) {
-          formattedCode += char;
-        }
-      }
-    }
-
+    const formattedCode = e.target.value.toUpperCase().replace(/\s/g, '');
     setCode(formattedCode);
   };
 
@@ -172,8 +178,8 @@ export function HomePage() {
                     type="text"
                     value={code}
                     onChange={handleCodeChange}
-                    maxLength={7}
-                    placeholder="Ex: ABC1234"
+                    maxLength={12}
+                    placeholder="Ex: MEUALBÚM123"
                     className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text-sm sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light tracking-widest font-mono uppercase"
                     autoFocus
                   />
@@ -188,13 +194,44 @@ export function HomePage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={code.length !== 7}
                       className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Entrar
                     </button>
                   </div>
                 </form>
+                // <form
+                //   onSubmit={handleSubmit}
+                //   className="w-full flex flex-col gap-2 sm:gap-3 animate-in fade-in zoom-in duration-300"
+                // >
+                //   <input
+                //     type="text"
+                //     value={code}
+                //     onChange={handleCodeChange}
+
+                //     maxLength={7}
+                //     placeholder="Ex: ABC1234"
+                //     className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 rounded-lg text-sm sm:text-lg text-center focus:ring-2 focus:ring-[#0f172a] focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-light tracking-widest font-mono uppercase"
+                //     autoFocus
+                //   />
+
+                //   <div className="flex gap-2">
+                //     <button
+                //       type="button"
+                //       onClick={() => setShowInput(false)}
+                //       className="flex-1 bg-gray-100 text-gray-600 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-200 transition-colors"
+                //     >
+                //       Cancelar
+                //     </button>
+                //     <button
+                //       type="submit"
+                //       disabled={code.length !== 7}
+                //       className="flex-1 bg-[#0f172a] text-white py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                //     >
+                //       Entrar
+                //     </button>
+                //   </div>
+                // </form>
               )}
             </div>
           </div>
