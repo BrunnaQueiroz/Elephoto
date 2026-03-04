@@ -57,7 +57,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const cartTotal = cart.reduce((total, _, index) => {
     const posicao = index + 1; // 1ª foto, 2ª foto, etc.
-    const precoBase = 6.9;
+    // const precoBase = 6.9;
+    const precoBase = 4.99;
 
     if (posicao >= 6) {
       // Da sexta foto em diante, valor fixo

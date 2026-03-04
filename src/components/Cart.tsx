@@ -222,7 +222,7 @@ export function Cart({ isOpen, onClose }: CartProps) {
             <div className="space-y-4 mb-8">
               {cart.map((photo, index) => {
                 const posicao = index + 1;
-                const precoBase = 6.9;
+                const precoBase = 4.99;
                 const precoExibicao =
                   posicao >= 6 ? 1.99 : precoBase * Math.pow(0.8, index);
 
