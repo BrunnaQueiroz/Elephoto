@@ -1,6 +1,16 @@
-import { useState } from 'react';
-import { X, Trash2, CreditCard, Loader2, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  X,
+  Trash2,
+  CreditCard,
+  Loader2,
+  Sparkles,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 
 interface CartProps {
   isOpen: boolean;
@@ -8,15 +18,114 @@ interface CartProps {
 }
 
 export function Cart({ isOpen, onClose }: CartProps) {
-  const { cart, removeFromCart, cartTotal } = useApp();
+  const { cart, removeFromCart, addToCart, cartTotal } = useApp();
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Estados para a vitrine pública
+  const [publicPhotos, setPublicPhotos] = useState<any[]>([]);
+  const [isLoadingUpsell, setIsLoadingUpsell] = useState(false);
+
+  // --- REFS PARA O CARROSSEL ---
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
+  const startX = useRef(0);
+  const scrollLeftStart = useRef(0);
+  const isDragging = useRef(false);
+
+  // Busca as fotos públicas
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchPublicPhotos = async () => {
+      setIsLoadingUpsell(true);
+      try {
+        const { data, error } = await supabase
+          .from('photos')
+          .select('*')
+          .eq('is_public', true)
+          .limit(10);
+
+        if (data) {
+          setPublicPhotos(data);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar fotos públicas:', err);
+      } finally {
+        setIsLoadingUpsell(false);
+      }
+    };
+
+    fetchPublicPhotos();
+  }, [isOpen]);
+
+  const availableUpsells = publicPhotos.filter(
+    publicPhoto => !cart.some(cartItem => cartItem.id === publicPhoto.id)
+  );
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (
+      !scrollContainer ||
+      isCarouselPaused ||
+      !isOpen ||
+      availableUpsells.length === 0
+    )
+      return;
+
+    let scrollAmount = scrollContainer.scrollLeft;
+    const scrollSpeed = 0.5;
+    let animationId: number;
+
+    const scroll = () => {
+      if (!scrollContainer) return;
+      scrollAmount += scrollSpeed;
+
+      if (
+        scrollAmount >=
+        scrollContainer.scrollWidth - scrollContainer.clientWidth
+      ) {
+        scrollAmount = 0;
+      }
+
+      scrollContainer.scrollLeft = scrollAmount;
+      animationId = requestAnimationFrame(scroll);
+    };
+
+    animationId = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(animationId);
+  }, [isCarouselPaused, isOpen, availableUpsells.length]);
+
+  const scrollByAmount = (amount: number) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsCarouselPaused(true);
+    isDragging.current = true;
+    startX.current = e.pageX - scrollContainerRef.current!.offsetLeft;
+    scrollLeftStart.current = scrollContainerRef.current!.scrollLeft;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (startX.current - x) * 2;
+    scrollContainerRef.current.scrollLeft = scrollLeftStart.current + walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDragging.current = false;
+    setIsCarouselPaused(false);
+  };
 
   if (!isOpen) return null;
 
   const handleCheckout = async () => {
     setIsProcessing(true);
     try {
-      // 1. A MÁGICA AQUI: Aplicamos a sua regra de desconto ANTES de enviar pro Stripe
       const cartWithDiscount = cart.map((photo, index) => {
         const posicao = index + 1;
         const precoBase = 6.9;
@@ -25,12 +134,11 @@ export function Cart({ isOpen, onClose }: CartProps) {
 
         return {
           ...photo,
-          price: precoExibicao, // Sobrescreve os R$15 do banco pelo valor com desconto
-          name: `Foto Digital (${posicao}ª Foto)`, // Ajuda a ficar bonitinho no recibo do Stripe
+          price: precoExibicao,
+          name: `Foto Digital (${posicao}ª Foto)`,
         };
       });
 
-      // 2. Envia o carrinho já com os preços matematicamente calculados
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,21 +161,19 @@ export function Cart({ isOpen, onClose }: CartProps) {
 
   return (
     <>
-      {/* Overlay com desfoque suave */}
       <div
         className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity"
         onClick={onClose}
       />
 
       <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col font-sans animate-in slide-in-from-right duration-500">
-        {/* CABEÇALHO LÚDICO COM OVELHA EM DESTAQUE */}
+        {/* CABEÇALHO */}
         <div className="flex items-center justify-between p-6 border-b border-pink-100 bg-gradient-to-b from-pink-50/50 to-white">
           <div className="flex items-center gap-4">
             <div className="relative">
               <div className="w-16 h-16 rounded-2xl bg-white shadow-md border-2 border-pink-100 flex items-center justify-center animate-bounce overflow-hidden">
                 <img
                   src="/sheep.jpeg"
-                  // src="/compras.jpeg"
                   alt="Sheep"
                   className="w-full h-full object-cover"
                 />
@@ -94,10 +200,10 @@ export function Cart({ isOpen, onClose }: CartProps) {
           </button>
         </div>
 
-        {/* LISTA DE ITENS COM ANIMAÇÕES */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {/* ÁREA ROLÁVEL PRINCIPAL */}
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col">
           {cart.length === 0 ? (
-            <div className="text-center py-20 flex flex-col items-center justify-center">
+            <div className="text-center py-10 flex flex-col items-center justify-center">
               <div className="relative mb-6">
                 <img
                   src="/sheep.jpeg"
@@ -108,12 +214,12 @@ export function Cart({ isOpen, onClose }: CartProps) {
                   <CreditCard className="w-6 h-6" />
                 </div>
               </div>
-              <p className="text-gray-400 font-medium italic">
+              <p className="text-gray-400 font-medium italic mb-6">
                 Seu carrinho está esperando por fotos lindas!
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 mb-8">
               {cart.map((photo, index) => {
                 const posicao = index + 1;
                 const precoBase = 6.9;
@@ -157,11 +263,77 @@ export function Cart({ isOpen, onClose }: CartProps) {
               })}
             </div>
           )}
+
+          {/* --- NOVA SEÇÃO: CARROSSEL "VOCÊ TAMBÉM PODE GOSTAR" --- */}
+          {availableUpsells.length > 0 && (
+            <div className="mt-auto pt-8 border-t border-gray-100 animate-in fade-in duration-700 relative group">
+              <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2 uppercase tracking-wide">
+                <Sparkles className="w-4 h-4 text-pink-500" />
+                Você também pode gostar
+              </h3>
+
+              {/* SETA ESQUERDA (Aparece no hover do desktop) */}
+              <button
+                onClick={() => scrollByAmount(-160)}
+                onMouseEnter={() => setIsCarouselPaused(true)}
+                onMouseLeave={() => setIsCarouselPaused(false)}
+                className="hidden md:flex absolute left-[-16px] top-[60%] z-10 items-center justify-center w-8 h-8 bg-white border border-gray-100 rounded-full shadow-md text-pink-500 hover:bg-pink-50 transition-all opacity-0 group-hover:opacity-100"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              {/* CONTAINER ROLÁVEL */}
+              <div
+                ref={scrollContainerRef}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUpOrLeave}
+                onMouseLeave={handleMouseUpOrLeave}
+                onTouchStart={() => setIsCarouselPaused(true)}
+                onTouchEnd={() => setIsCarouselPaused(false)}
+                className="flex gap-4 overflow-x-auto pb-4 cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+                style={{ WebkitOverflowScrolling: 'touch' }} // Scroll suave nativo no mobile
+              >
+                {availableUpsells.map(photo => (
+                  <div
+                    key={photo.id}
+                    className="min-w-[140px] max-w-[140px] flex-shrink-0 flex flex-col gap-3 group/item select-none"
+                  >
+                    <div className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm group-hover/item:shadow-md transition-shadow relative pointer-events-none">
+                      <img
+                        src={photo.thumbnail_url}
+                        className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                        alt="Foto Extra"
+                        draggable={false} // Evita aquele "fantasma" da imagem ao arrastar no desktop
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => addToCart(photo)}
+                      className="w-full py-2 bg-gray-100 text-gray-900 text-xs font-bold rounded-xl hover:bg-pink-500 hover:text-white transition-colors flex items-center justify-center gap-1 active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" /> Adicionar
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* SETA DIREITA (Aparece no hover do desktop) */}
+              <button
+                onClick={() => scrollByAmount(160)}
+                onMouseEnter={() => setIsCarouselPaused(true)}
+                onMouseLeave={() => setIsCarouselPaused(false)}
+                className="hidden md:flex absolute right-[-16px] top-[60%] z-10 items-center justify-center w-8 h-8 bg-white border border-gray-100 rounded-full shadow-md text-pink-500 hover:bg-pink-50 transition-all opacity-0 group-hover:opacity-100"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* FOOTER */}
+        {/* FOOTER DO CARRINHO */}
         {cart.length > 0 && (
-          <div className="border-t border-gray-100 p-6 bg-white space-y-4">
+          <div className="border-t border-gray-100 p-6 bg-white space-y-4 z-20">
             <div className="flex items-center justify-between p-4 bg-pink-50/50 rounded-2xl border border-pink-100/50">
               <div>
                 <span className="text-sm text-gray-500 block">
@@ -175,6 +347,7 @@ export function Cart({ isOpen, onClose }: CartProps) {
                 src="/compras.jpeg"
                 className="w-28 h-auto rounded-full border-2 border-white shadow-sm"
                 alt="Sheep Icon"
+                draggable={false}
               />
             </div>
 
@@ -183,7 +356,6 @@ export function Cart({ isOpen, onClose }: CartProps) {
               disabled={isProcessing}
               className="group relative w-full overflow-hidden bg-gray-900 text-white py-5 rounded-2xl font-bold border-2 border-transparent hover:border-pink-100 hover:bg-white transition-all duration-500 active:scale-95 disabled:opacity-70 shadow-xl"
             >
-              {/* Camada da Animação do Carrinho */}
               {!isProcessing && (
                 <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex items-center">
                   <img
@@ -194,7 +366,6 @@ export function Cart({ isOpen, onClose }: CartProps) {
                 </div>
               )}
 
-              {/* Conteúdo Original (Some completamente no hover) */}
               <div className="relative flex items-center justify-center gap-3 z-10 transition-all duration-300 group-hover:opacity-0 group-hover:scale-90">
                 {isProcessing ? (
                   <>
@@ -209,7 +380,6 @@ export function Cart({ isOpen, onClose }: CartProps) {
                 )}
               </div>
 
-              {/* Fundo Branco no Hover */}
               <div className="absolute inset-0 bg-pink-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </button>
 
