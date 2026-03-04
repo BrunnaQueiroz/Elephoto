@@ -392,8 +392,28 @@ export function GalleryPage() {
                       draggable={false}
                     />
                     {/* Overlay de zoom no hover para dar feedback visual */}
-                    <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover/item:opacity-100">
+                    {/* <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover/item:opacity-100">
                       <Maximize2 className="text-white w-6 h-6 drop-shadow-lg" />
+                    </div> */}
+                    <div
+                      className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-200 shadow-sm group-hover/item:shadow-md transition-shadow relative cursor-zoom-in"
+                      onClick={() => setSelectedPhoto(photo)}
+                    >
+                      <img
+                        src={photo.thumbnail_url}
+                        className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                        alt={photo.description || 'Foto Extra'}
+                        draggable={false}
+                      />
+                      {/* Overlay de zoom e descrição no hover */}
+                      <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/60 transition-colors flex flex-col items-center justify-center opacity-0 group-hover/item:opacity-100 p-4 text-center">
+                        <Maximize2 className="text-white w-6 h-6 drop-shadow-lg mb-2" />
+                        {photo.description && (
+                          <p className="text-white text-xs font-medium drop-shadow-md line-clamp-3">
+                            {photo.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -422,7 +442,7 @@ export function GalleryPage() {
 
       {/* MODAL / LIGHTBOX (VISUALIZAÇÃO AMPLIADA) */}
 
-      {selectedPhoto && (
+      {/* {selectedPhoto && (
         <div
           className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setSelectedPhoto(null)}
@@ -453,6 +473,50 @@ export function GalleryPage() {
               <p className="text-sm opacity-70">Foto Digital</p>
             </div>
             {renderCartButton(selectedPhoto, true)}
+          </div>
+        </div>
+      )} */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <button
+            onClick={() => setSelectedPhoto(null)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          <div
+            className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <img
+              src={selectedPhoto.url || selectedPhoto.thumbnail_url}
+              alt="Visualização ampliada"
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+
+          {/* BARRA INFERIOR ATUALIZADA COM DESCRIÇÃO */}
+          <div
+            className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 w-full max-w-5xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-white text-center sm:text-left flex-1">
+              <p className="text-sm opacity-70 font-semibold tracking-wider uppercase">
+                Foto Digital
+              </p>
+              {selectedPhoto.description && (
+                <p className="text-base text-gray-200 mt-2 font-light max-w-2xl">
+                  {selectedPhoto.description}
+                </p>
+              )}
+            </div>
+            <div className="flex-shrink-0">
+              {renderCartButton(selectedPhoto, true)}
+            </div>
           </div>
         </div>
       )}

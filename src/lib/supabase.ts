@@ -21,6 +21,7 @@ export interface Photo {
   width?: string;
   height?: string;
   format: string;
+  description?: string;
 }
 
 // Tipo para o Cartão (Token) - Caso precise no futuro

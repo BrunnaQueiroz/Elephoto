@@ -12,6 +12,10 @@ import {
   Globe,
   ImagePlus,
   ArrowLeft,
+  LayoutList,
+  Save,
+  Pencil,
+  CheckCircle,
 } from 'lucide-react';
 
 export function AdminPage() {
@@ -22,17 +26,25 @@ export function AdminPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [uploadMode, setUploadMode] = useState<
-    'selection' | 'private' | 'public'
+    'selection' | 'private' | 'public' | 'manage'
   >('selection');
 
   // Estados do Formulário de Upload
   const [newToken, setNewToken] = useState('');
   const [files, setFiles] = useState<FileList | null>(null);
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{
     type: 'success' | 'error';
     msg: string;
   } | null>(null);
+
+  // --- ESTADOS PARA O GERENCIADOR DE VITRINE ---
+  const [publicGallery, setPublicGallery] = useState<any[]>([]);
+  const [descInputs, setDescInputs] = useState<Record<string, string>>({});
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [editingIds, setEditingIds] = useState<Record<string, boolean>>({});
+  const [toast, setToast] = useState({ show: false, msg: '' });
 
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.toUpperCase();
@@ -102,19 +114,74 @@ export function AdminPage() {
     });
   };
 
+  // --- FUNÇÃO DE BUSCAR FOTOS PARA GERENCIAR ---
+  const loadPublicGallery = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setPublicGallery(data || []);
+
+      const initialInputs: Record<string, string> = {};
+      data?.forEach(p => {
+        initialInputs[p.id] = p.description || '';
+      });
+      setDescInputs(initialInputs);
+    } catch (err) {
+      console.error('Erro ao carregar galeria:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- FUNÇÃO DE SALVAR NOVA DESCRIÇÃO ---
+  const saveDescription = async (photoId: string) => {
+    setUpdatingId(photoId);
+    try {
+      const newDesc = descInputs[photoId]?.trim() || null;
+
+      const { error } = await supabase
+        .from('photos')
+        .update({ description: newDesc })
+        .eq('id', photoId);
+
+      if (error) throw error;
+
+      setPublicGallery(prev =>
+        prev.map(p => (p.id === photoId ? { ...p, description: newDesc } : p))
+      );
+
+      // Fecha o modo de edição
+      setEditingIds(prev => ({ ...prev, [photoId]: false }));
+
+      // Exibe a mensagem de sucesso amigável
+      setToast({ show: true, msg: 'Descrição salva com sucesso!' });
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000);
+    } catch (err) {
+      console.error('Erro ao atualizar:', err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   // --- UPLOAD COM VALIDAÇÃO E COMPRESSÃO ---
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const token = newToken.trim().toUpperCase();
 
-    // Se for modo privado, exige validação do código
     if (uploadMode === 'private') {
       const regex = /^[A-Z]{3}[0-9]{4}$/;
       if (!regex.test(token)) {
         setStatus({
           type: 'error',
-          msg: '⚠️ O código deve ter exatamente 3 letras seguidas de 4 números (Ex: ABC1234).',
+          msg: 'O código deve ter exatamente 3 letras seguidas de 4 números (Ex: ABC1234).',
         });
         return;
       }
@@ -127,11 +194,10 @@ export function AdminPage() {
 
     try {
       let cardId = null;
-      let folderName = 'public_gallery'; // Pasta padrão para fotos públicas
+      let folderName = 'public_gallery';
 
-      // Se for privado, cria ou recupera o Card no banco
       if (uploadMode === 'private') {
-        folderName = token; // Pasta com o nome do código
+        folderName = token;
         const { data: cardData, error: cardError } = await supabase
           .from('cards')
           .insert([{ code: token }])
@@ -154,7 +220,6 @@ export function AdminPage() {
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const timestamp = Date.now();
 
-        // PASSO A: COMPRESSÃO
         const compressionOptions = {
           maxSizeMB: 0.3,
           maxWidthOrHeight: 1080,
@@ -162,7 +227,6 @@ export function AdminPage() {
         };
         const compressedFile = await imageCompression(file, compressionOptions);
 
-        // PASSO B: MARCA D'ÁGUA
         const watermarkedBlob = await applyWatermark(compressedFile);
         const watermarkedFile = new File(
           [watermarkedBlob],
@@ -170,21 +234,17 @@ export function AdminPage() {
           { type: 'image/jpeg' }
         );
 
-        // Define os nomes dos arquivos organizados na pasta correta
         const fileNameOriginal = `${folderName}/original_${timestamp}_${i}_${safeFileName}`;
         const fileNamePublic = `${folderName}/display_${timestamp}_${i}.jpg`;
 
-        // Upload Original
         await supabase.storage.from('photos').upload(fileNameOriginal, file);
 
-        // Upload Vitrine
         const { error: uploadError } = await supabase.storage
           .from('photos')
           .upload(fileNamePublic, watermarkedFile);
 
         if (uploadError) throw uploadError;
 
-        // Pega URLs
         const {
           data: { publicUrl: thumbUrl },
         } = supabase.storage.from('photos').getPublicUrl(fileNamePublic);
@@ -192,18 +252,17 @@ export function AdminPage() {
           data: { publicUrl: origUrl },
         } = supabase.storage.from('photos').getPublicUrl(fileNameOriginal);
 
-        // Monta o objeto da foto dependendo do modo
         uploadedPhotos.push({
           url: origUrl,
           thumbnail_url: thumbUrl,
           price: 15.0,
           filename: fileNameOriginal,
-          is_public: uploadMode === 'public', // Define se a foto é pública
-          ...(uploadMode === 'private' && { card_id: cardId }), // Só adiciona card_id se for privado
+          is_public: uploadMode === 'public',
+          description: description.trim() !== '' ? description.trim() : null,
+          ...(uploadMode === 'private' && { card_id: cardId }),
         });
       }
 
-      // Salva no banco de dados
       const { error: photosError } = await supabase
         .from('photos')
         .insert(uploadedPhotos);
@@ -216,8 +275,10 @@ export function AdminPage() {
           uploadMode === 'public' ? 'pública' : token
         }.`,
       });
+
       setNewToken('');
       setFiles(null);
+      setDescription('');
       const fileInput = document.getElementById(
         'file-upload'
       ) as HTMLInputElement;
@@ -305,17 +366,17 @@ export function AdminPage() {
           </button>
         </header>
 
-        <main className="max-w-4xl mx-auto p-6 mt-10">
+        <main className="max-w-6xl mx-auto p-6 mt-10">
           <div className="text-center mb-12">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              O que vamos enviar hoje?
+              O que vamos fazer hoje?
             </h1>
             <p className="text-gray-500 text-lg">
-              Selecione o destino das fotos que você deseja fazer o upload.
+              Selecione o destino das fotos ou gerencie sua vitrine.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <button
               onClick={() => setUploadMode('private')}
               className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
@@ -327,11 +388,11 @@ export function AdminPage() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   Fotos do Cliente
                 </h2>
-                <p className="text-gray-500 leading-relaxed">
+                <p className="text-gray-500 leading-relaxed text-sm">
                   Álbum privado e seguro. Exige a criação de um código único.
                 </p>
               </div>
-              <div className="mt-auto pt-4 flex items-center text-blue-600 font-semibold">
+              <div className="mt-auto pt-4 flex items-center text-blue-600 font-semibold text-sm">
                 <ImagePlus className="w-5 h-5 mr-2" /> Enviar fotos privadas
               </div>
             </button>
@@ -347,12 +408,35 @@ export function AdminPage() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   Fotos Públicas
                 </h2>
-                <p className="text-gray-500 leading-relaxed">
+                <p className="text-gray-500 leading-relaxed text-sm">
                   Fotos genéricas (paisagens, detalhes) para a vitrine livre.
                 </p>
               </div>
-              <div className="mt-auto pt-4 flex items-center text-emerald-600 font-semibold">
+              <div className="mt-auto pt-4 flex items-center text-emerald-600 font-semibold text-sm">
                 <ImagePlus className="w-5 h-5 mr-2" /> Enviar fotos públicas
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setUploadMode('manage');
+                loadPublicGallery();
+              }}
+              className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
+            >
+              <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 transition-transform">
+                <LayoutList className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Gerenciar Vitrine
+                </h2>
+                <p className="text-gray-500 leading-relaxed text-sm">
+                  Edite as descrições das fotos que já estão na vitrine pública.
+                </p>
+              </div>
+              <div className="mt-auto pt-4 flex items-center text-purple-600 font-semibold text-sm">
+                <Save className="w-5 h-5 mr-2" /> Editar Descrições
               </div>
             </button>
           </div>
@@ -361,7 +445,145 @@ export function AdminPage() {
     );
   }
 
-  // --- TELA 3: FORMULÁRIO DE UPLOAD (PÚBLICO OU PRIVADO) ---
+  // --- TELA 3.5: GERENCIAR VITRINE (NOVA TELA) ---
+  if (uploadMode === 'manage') {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setUploadMode('selection')}
+              className="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-full hover:bg-gray-100"
+              title="Voltar"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <span className="font-semibold text-gray-900">
+              Gerenciar Vitrine Pública
+            </span>
+          </div>
+        </header>
+
+        <main className="max-w-6xl mx-auto p-6 mt-6 relative">
+          {/* MENSAGEM FLUTUANTE DE SUCESSO */}
+          {toast.show && (
+            <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <span className="font-medium">{toast.msg}</span>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <Loader2 className="w-10 h-10 animate-spin text-purple-600 mb-4" />
+              <p>Carregando galeria pública...</p>
+            </div>
+          ) : publicGallery.length === 0 ? (
+            <div className="text-center py-20 text-gray-500">
+              <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-20" />
+              <p className="text-lg">Você ainda não tem fotos públicas.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {publicGallery.map(photo => {
+                const isEditing = editingIds[photo.id] || !photo.description;
+
+                return (
+                  <div
+                    key={photo.id}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full"
+                  >
+                    <div className="h-56 w-full bg-gray-100 relative flex-shrink-0">
+                      <img
+                        src={photo.thumbnail_url}
+                        alt="Foto"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    <div className="p-4 flex flex-col flex-1 gap-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          Descrição da Imagem
+                        </label>
+                        {photo.description && !isEditing && (
+                          <button
+                            onClick={() =>
+                              setEditingIds(prev => ({
+                                ...prev,
+                                [photo.id]: true,
+                              }))
+                            }
+                            className="text-purple-600 hover:text-purple-800 transition-colors p-1"
+                            title="Editar descrição"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {isEditing ? (
+                        <>
+                          <textarea
+                            value={descInputs[photo.id] || ''}
+                            onChange={e =>
+                              setDescInputs(prev => ({
+                                ...prev,
+                                [photo.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Sem descrição... Clique para adicionar."
+                            className="w-full flex-1 min-h-[80px] p-3 border border-gray-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-purple-500 outline-none transition-all bg-gray-50 focus:bg-white"
+                          />
+                          <div className="mt-auto flex gap-2">
+                            {photo.description && (
+                              <button
+                                onClick={() => {
+                                  setEditingIds(prev => ({
+                                    ...prev,
+                                    [photo.id]: false,
+                                  }));
+                                  setDescInputs(prev => ({
+                                    ...prev,
+                                    [photo.id]: photo.description || '',
+                                  }));
+                                }}
+                                className="py-2.5 px-4 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                            <button
+                              onClick={() => saveDescription(photo.id)}
+                              disabled={updatingId === photo.id}
+                              className="flex-1 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-purple-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                              {updatingId === photo.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Save className="w-4 h-4" />
+                              )}
+                              Salvar
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-600 font-light leading-relaxed flex-1">
+                          {photo.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // --- TELA 4: FORMULÁRIO DE UPLOAD (PÚBLICO OU PRIVADO) ---
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -372,6 +594,7 @@ export function AdminPage() {
               setStatus(null);
               setFiles(null);
               setNewToken('');
+              setDescription('');
             }}
             className="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-full hover:bg-gray-100"
             title="Voltar"
@@ -402,7 +625,6 @@ export function AdminPage() {
           </h2>
 
           <form onSubmit={handleUpload} className="space-y-6">
-            {/* SÓ MOSTRA O INPUT DE CÓDIGO SE FOR MODO PRIVADO */}
             {uploadMode === 'private' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -452,6 +674,25 @@ export function AdminPage() {
                 </div>
               </div>
             </div>
+
+            {uploadMode === 'public' && (
+              <div className="animate-in fade-in duration-300">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  2. Descrição Opcional
+                </label>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Ex: Ensaio de casamento na praia (aplicado a todas)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  disabled={loading}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Essa descrição será exibida para o cliente na vitrine.
+                </p>
+              </div>
+            )}
 
             {status && (
               <div
