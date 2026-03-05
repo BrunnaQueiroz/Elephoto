@@ -509,6 +509,27 @@ export function AdminPage() {
                         className="w-full h-full object-cover"
                       />
                     </div>
+                    {/* --- INFO DO FOTÓGRAFO (ABAIXO DA FOTO) --- */}
+                    <div className="mt-3 flex items-center gap-3 px-1">
+                      {/* Foto de Perfil Circular */}
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-100 shadow-sm">
+                        <img
+                          src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop"
+                          alt="Jorge Lambert"
+                          className="w-full h-auto object-cover"
+                        />
+                      </div>
+
+                      {/* Nome e Tag */}
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-gray-900 leading-tight">
+                          Jorge Lambert
+                        </span>
+                        <span className="text-[10px] text-blue-500 font-medium uppercase tracking-wider">
+                          Fotógrafo Parceiro
+                        </span>
+                      </div>
+                    </div>
                     <div className="p-4 flex flex-col flex-1 gap-3">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
