@@ -2,7 +2,6 @@ import { useState } from 'react';
 import imageCompression from 'browser-image-compression';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
-import { Eye, EyeOff } from 'lucide-react';
 import {
   Upload,
   Plus,
@@ -17,6 +16,9 @@ import {
   Save,
   Pencil,
   CheckCircle,
+  AlertCircle,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export function AdminPage() {
@@ -41,12 +43,19 @@ export function AdminPage() {
     msg: string;
   } | null>(null);
 
-  // --- ESTADOS PARA O GERENCIADOR DE VITRINE ---
+  // Estados para o Gerenciador de Vitrine
   const [publicGallery, setPublicGallery] = useState<any[]>([]);
   const [descInputs, setDescInputs] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [editingIds, setEditingIds] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState({ show: false, msg: '' });
+
+  // Estado do Modal de Confirmação de Álbum Existente
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    token: string;
+    cardId: string;
+  } | null>(null);
 
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.toUpperCase();
@@ -68,7 +77,6 @@ export function AdminPage() {
     else setStatus(null);
   };
 
-  // --- LOGIN MOCK ---
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (email === 'admin' && password === 'Eleph@to2026') {
@@ -79,7 +87,6 @@ export function AdminPage() {
     }
   };
 
-  // --- FUNÇÃO DE MARCA D'ÁGUA ---
   const applyWatermark = (file: File | Blob): Promise<Blob> => {
     return new Promise(resolve => {
       const img = new Image();
@@ -116,7 +123,6 @@ export function AdminPage() {
     });
   };
 
-  // --- FUNÇÃO DE BUSCAR FOTOS PARA GERENCIAR ---
   const loadPublicGallery = async () => {
     setLoading(true);
     try {
@@ -142,7 +148,6 @@ export function AdminPage() {
     }
   };
 
-  // --- FUNÇÃO DE SALVAR NOVA DESCRIÇÃO ---
   const saveDescription = async (photoId: string) => {
     setUpdatingId(photoId);
     try {
@@ -159,10 +164,8 @@ export function AdminPage() {
         prev.map(p => (p.id === photoId ? { ...p, description: newDesc } : p))
       );
 
-      // Fecha o modo de edição
       setEditingIds(prev => ({ ...prev, [photoId]: false }));
 
-      // Exibe a mensagem de sucesso amigável
       setToast({ show: true, msg: 'Descrição salva com sucesso!' });
       setTimeout(() => setToast({ show: false, msg: '' }), 3000);
     } catch (err) {
@@ -172,73 +175,13 @@ export function AdminPage() {
     }
   };
 
-  // --- UPLOAD COM VALIDAÇÃO E COMPRESSÃO ---
-  // --- UPLOAD COM VALIDAÇÃO E COMPRESSÃO ---
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const token = newToken.trim().toUpperCase();
-
-    // Se for modo privado, exige validação do código
-    if (uploadMode === 'private') {
-      const regex = /^[A-Z]{3}[0-9]{4}$/;
-      if (!regex.test(token)) {
-        setStatus({
-          type: 'error',
-          msg: 'O código deve ter exatamente 3 letras seguidas de 4 números (Ex: ABC1234).',
-        });
-        return;
-      }
-    }
-
+  const executeUpload = async (cardId: string | null, folderName: string) => {
     if (!files || files.length === 0) return;
 
     setLoading(true);
-    setStatus(null);
+    setConfirmModal(null);
 
     try {
-      let cardId = null;
-      let folderName = 'public_gallery'; // Pasta padrão para fotos públicas
-
-      // Se for privado, cria ou recupera o Card no banco
-      if (uploadMode === 'private') {
-        folderName = token; // Pasta com o nome do código
-
-        // 1. Verifica se o álbum já existe no banco
-        const { data: existingCard, error: searchError } = await supabase
-          .from('cards')
-          .select('id')
-          .eq('code', token)
-          .maybeSingle();
-
-        if (searchError) throw searchError;
-
-        if (existingCard) {
-          // 2. Se existir, exibe o alerta de confirmação
-          const confirmAdd = window.confirm(
-            `O álbum ${token} já existe! Deseja adicionar estas novas fotos a ele?`
-          );
-
-          if (!confirmAdd) {
-            // Se o fotógrafo clicar em "Cancelar", abortamos o upload
-            setLoading(false);
-            return;
-          }
-          // Se clicar em "OK", usamos o ID do álbum existente
-          cardId = existingCard.id;
-        } else {
-          // 3. Se não existir, cria um novo álbum normalmente
-          const { data: newCard, error: insertError } = await supabase
-            .from('cards')
-            .insert([{ code: token }])
-            .select()
-            .single();
-
-          if (insertError) throw insertError;
-          cardId = newCard.id;
-        }
-      }
-
       const uploadedPhotos = [];
 
       for (let i = 0; i < files.length; i++) {
@@ -246,7 +189,6 @@ export function AdminPage() {
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const timestamp = Date.now();
 
-        // PASSO A: COMPRESSÃO
         const compressionOptions = {
           maxSizeMB: 0.3,
           maxWidthOrHeight: 1080,
@@ -254,7 +196,6 @@ export function AdminPage() {
         };
         const compressedFile = await imageCompression(file, compressionOptions);
 
-        // PASSO B: MARCA D'ÁGUA
         const watermarkedBlob = await applyWatermark(compressedFile);
         const watermarkedFile = new File(
           [watermarkedBlob],
@@ -262,21 +203,17 @@ export function AdminPage() {
           { type: 'image/jpeg' }
         );
 
-        // Define os nomes dos arquivos organizados na pasta correta
         const fileNameOriginal = `${folderName}/original_${timestamp}_${i}_${safeFileName}`;
         const fileNamePublic = `${folderName}/display_${timestamp}_${i}.jpg`;
 
-        // Upload Original
         await supabase.storage.from('photos').upload(fileNameOriginal, file);
 
-        // Upload Vitrine
         const { error: uploadError } = await supabase.storage
           .from('photos')
           .upload(fileNamePublic, watermarkedFile);
 
         if (uploadError) throw uploadError;
 
-        // Pega URLs
         const {
           data: { publicUrl: thumbUrl },
         } = supabase.storage.from('photos').getPublicUrl(fileNamePublic);
@@ -284,7 +221,6 @@ export function AdminPage() {
           data: { publicUrl: origUrl },
         } = supabase.storage.from('photos').getPublicUrl(fileNameOriginal);
 
-        // Monta o objeto da foto dependendo do modo
         uploadedPhotos.push({
           url: origUrl,
           thumbnail_url: thumbUrl,
@@ -296,7 +232,6 @@ export function AdminPage() {
         });
       }
 
-      // Salva no banco de dados
       const { error: photosError } = await supabase
         .from('photos')
         .insert(uploadedPhotos);
@@ -306,7 +241,7 @@ export function AdminPage() {
       setStatus({
         type: 'success',
         msg: `Sucesso! ${files.length} fotos enviadas para a galeria ${
-          uploadMode === 'public' ? 'pública' : token
+          uploadMode === 'public' ? 'pública' : folderName
         }.`,
       });
 
@@ -324,6 +259,64 @@ export function AdminPage() {
         msg: err.message || 'Erro ao realizar upload.',
       });
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const token = newToken.trim().toUpperCase();
+
+    if (uploadMode === 'private') {
+      const regex = /^[A-Z]{3}[0-9]{4}$/;
+      if (!regex.test(token)) {
+        setStatus({
+          type: 'error',
+          msg: 'O código deve ter exatamente 3 letras seguidas de 4 números (Ex: ABC1234).',
+        });
+        return;
+      }
+    }
+
+    if (!files || files.length === 0) return;
+
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      if (uploadMode === 'private') {
+        const { data: existingCard, error: searchError } = await supabase
+          .from('cards')
+          .select('id')
+          .eq('code', token)
+          .maybeSingle();
+
+        if (searchError) throw searchError;
+
+        if (existingCard) {
+          setLoading(false);
+          setConfirmModal({ show: true, token, cardId: existingCard.id });
+          return;
+        }
+
+        const { data: newCard, error: insertError } = await supabase
+          .from('cards')
+          .insert([{ code: token }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        await executeUpload(newCard.id, token);
+      } else {
+        await executeUpload(null, 'public_gallery');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setStatus({
+        type: 'error',
+        msg: err.message || 'Erro ao preparar upload.',
+      });
       setLoading(false);
     }
   };
@@ -496,7 +489,7 @@ export function AdminPage() {
     );
   }
 
-  // --- TELA 3.5: GERENCIAR VITRINE (NOVA TELA) ---
+  // --- TELA 3.5: GERENCIAR VITRINE ---
   if (uploadMode === 'manage') {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -516,7 +509,6 @@ export function AdminPage() {
         </header>
 
         <main className="max-w-6xl mx-auto p-6 mt-6 relative">
-          {/* MENSAGEM FLUTUANTE DE SUCESSO */}
           {toast.show && (
             <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50">
               <CheckCircle className="w-5 h-5 text-green-400" />
@@ -634,9 +626,47 @@ export function AdminPage() {
     );
   }
 
-  // --- TELA 4: FORMULÁRIO DE UPLOAD (PÚBLICO OU PRIVADO) ---
+  // --- TELA 4: FORMULÁRIO DE UPLOAD ---
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* MODAL DE CONFIRMAÇÃO PARA ÁLBUM EXISTENTE */}
+      {confirmModal && confirmModal.show && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl animate-in fade-in zoom-in">
+            <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+              <AlertCircle className="w-8 h-8 text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Álbum já existente
+            </h2>
+            <p className="text-gray-600 mb-8 leading-relaxed">
+              O álbum{' '}
+              <strong className="text-gray-900">{confirmModal.token}</strong> já
+              existe. Deseja adicionar estas {files?.length} novas fotos a ele?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setConfirmModal(null);
+                  setLoading(false);
+                }}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() =>
+                  executeUpload(confirmModal.cardId, confirmModal.token)
+                }
+                className="flex-1 bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-xl transition-colors"
+              >
+                Sim, adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -669,7 +699,7 @@ export function AdminPage() {
         </button>
       </header>
 
-      <main className="max-w-3xl mx-auto p-6 mt-6">
+      <main className="max-w-3xl mx-auto p-6 mt-6 relative">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <h2 className="text-2xl font-light text-gray-900 mb-6 flex items-center gap-2">
             <Upload className="w-6 h-6" />
