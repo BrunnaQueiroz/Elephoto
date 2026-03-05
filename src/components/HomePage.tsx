@@ -132,21 +132,53 @@ export function HomePage() {
       )}
 
       <div className="min-h-[100dvh] flex flex-col w-full relative">
-        {/* HEADER */}
-        <header className="relative z-10 px-6 py-8 flex max-w-6xl mx-auto w-full justify-center sm:justify-start">
+        {/* HEADER / NAVBAR */}
+        <header className="relative z-10 px-6 py-6 flex items-center justify-between max-w-6xl mx-auto w-full">
+          {/* LOGO (Esquerda) */}
           <div
             onClick={() => window.location.reload()}
-            className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5 cursor-pointer group select-none"
+            className="flex items-center gap-3 sm:gap-4 cursor-pointer group select-none"
             title="Recarregar página"
           >
             <img
               src="/logo.png"
               alt="Elephoto"
-              className="h-16 sm:h-20 w-auto object-contain transition-transform duration-300 group-hover:scale-110"
+              className="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
-            <span className="text-xl sm:text-2xl font-medium text-gray-800 tracking-tight group-hover:text-gray-600 transition-colors text-center">
+            <span className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight group-hover:text-gray-600 transition-colors">
               Elephoto
             </span>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-8">
+            <a
+              href="#quem-somos"
+              className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              Quem Somos
+            </a>
+            <a
+              href="#como-funciona"
+              className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              Como Funciona
+            </a>
+            <a
+              href="#pilares"
+              className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              Pilares
+            </a>
+          </nav>
+
+          {/* BOTÃO CTA (Direita) */}
+          <div>
+            <button
+              onClick={() => setCurrentView('admin')}
+              className="text-xs sm:text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2 sm:px-6 sm:py-2.5 rounded-full transition-all"
+            >
+              Área do Fotógrafo
+            </button>
           </div>
         </header>
 
@@ -255,7 +287,10 @@ export function HomePage() {
       </div>
 
       {/* QUEM SOMOS E PILARES */}
-      <section className="w-full max-w-6xl mx-auto py-16 px-6 mb-10 mt-10">
+      <section
+        id="quem-somos"
+        className="w-full max-w-6xl mx-auto py-16 px-6 mb-10 mt-10"
+      >
         <div className="flex flex-col md:flex-row items-center gap-12 mb-20">
           <div className="flex-1 space-y-6 text-left animate-in slide-in-from-left duration-700">
             <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight">
@@ -326,7 +361,10 @@ export function HomePage() {
         </section>
 
         <RevealOnScroll>
-          <div className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-16 mb-10 relative overflow-hidden">
+          <div
+            id="pilares"
+            className="w-full max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-16 mb-10 relative overflow-hidden"
+          >
             <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight text-center mb-14">
               Nossos Pilares
             </h2>
@@ -379,7 +417,9 @@ export function HomePage() {
         </RevealOnScroll>
       </section>
       {/* COMO FUNCIONA */}
-      <HowItWorks />
+      <div id="como-funciona">
+        <HowItWorks />
+      </div>
 
       {/* BLOCO DE MARKETING */}
       <RevealOnScroll>

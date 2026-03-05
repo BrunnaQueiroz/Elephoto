@@ -12,15 +12,14 @@ export function HowItWorks() {
     {
       number: '2',
       title: 'Geração do Código',
-      description:
-        'Um código único e seguro é gerado automaticamente para o álbum.',
+      description: 'Um código único e seguro é gerado para o álbum.',
       colorClass: 'bg-purple-100 text-purple-700',
     },
     {
       number: '3',
       title: 'Entrega Mágica',
       description:
-        'O cliente acessa, visualiza, seleciona e baixa suas fotos favoritas.',
+        'O cliente acessa, visualiza, seleciona e baixa suas fotos favoritas após a confirmação do pagamento.',
       colorClass: 'bg-pink-100 text-pink-700',
     },
   ];
