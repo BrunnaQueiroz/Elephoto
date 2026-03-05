@@ -327,6 +327,44 @@ export function Cart({ isOpen, onClose }: CartProps) {
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
+              {/* --- AVISO DE USO NÃO COMERCIAL --- */}
+              <div className="max-w-4xl mx-auto mt-12 mb-8 px-6">
+                <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-amber-600"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" x2="12" y1="8" y2="12" />
+                      <line x1="12" x2="12.01" y1="16" y2="16" />
+                    </svg>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wider">
+                      Aviso de Direitos Autorais
+                    </h4>
+                    <p className="text-sm text-amber-800/80 font-light leading-relaxed">
+                      As imagens desta vitrine são destinadas exclusivamente
+                      para apreciação e demonstração de portfólio.
+                      <span className="font-semibold text-amber-900">
+                        {' '}
+                        É estritamente proibida a reprodução, distribuição ou
+                        utilização destas fotos para fins comerciais
+                      </span>{' '}
+                      sem a autorização prévia dos autores.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
