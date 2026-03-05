@@ -28,7 +28,6 @@ export function ContactSection() {
     setStatus('submitting');
 
     try {
-      // Faz o envio real dos dados para o seu e-mail usando o FormSubmit
       const response = await fetch(
         'https://formsubmit.co/ajax/contato@elephotu.com',
         {

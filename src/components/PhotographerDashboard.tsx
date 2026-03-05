@@ -1,9 +1,6 @@
 import { Lock, Globe, ImagePlus } from 'lucide-react';
-// import { useRouter } from 'next/navigation'; // Descomente para usar o roteamento do Next
 
 export function PhotographerDashboard() {
-  // const router = useRouter();
-
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6">
       <div className="max-w-4xl w-full">
@@ -18,10 +15,7 @@ export function PhotographerDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card: Fotos Privadas */}
-          <button
-            // onClick={() => router.push('/upload/privado')}
-            className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-zinc-200 transition-all text-left flex flex-col items-start gap-6"
-          >
+          <button className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-zinc-200 transition-all text-left flex flex-col items-start gap-6">
             <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform">
               <Lock className="w-8 h-8" />
             </div>
@@ -41,10 +35,7 @@ export function PhotographerDashboard() {
           </button>
 
           {/* Card: Fotos Públicas */}
-          <button
-            // onClick={() => router.push('/upload/publico')}
-            className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-zinc-200 transition-all text-left flex flex-col items-start gap-6"
-          >
+          <button className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-zinc-200 transition-all text-left flex flex-col items-start gap-6">
             <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-110 transition-transform">
               <Globe className="w-8 h-8" />
             </div>

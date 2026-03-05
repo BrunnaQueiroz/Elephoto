@@ -428,7 +428,6 @@ export function AdminPage() {
               </div>
             </button>
 
-            {/* BOTÃO DE GERENCIAR VITRINE RESTAURADO AQUI */}
             <button
               onClick={() => {
                 setUploadMode('manage');
@@ -477,7 +476,6 @@ export function AdminPage() {
         </header>
 
         <main className="max-w-6xl mx-auto p-6 mt-6 relative">
-          {/* TOAST CUSTOMIZADO EM VEZ DE ALERTA NATIVO */}
           {toast.show && (
             <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50">
               <CheckCircle className="w-5 h-5 text-green-400" />
