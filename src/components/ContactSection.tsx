@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { RevealOnScroll } from './RevealOnScroll';
-import { Mail, Send, CheckCircle } from 'lucide-react';
+import { Mail, Send, CheckCircle, Loader2 } from 'lucide-react';
 
 export function ContactSection() {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>(
@@ -47,10 +47,10 @@ export function ContactSection() {
                   E-mail Direto
                 </p>
                 <a
-                  href="mailto:contato@elephoto.com"
+                  href="mailto:contato@elephotu.com"
                   className="font-semibold text-gray-800 hover:text-blue-600 transition-colors"
                 >
-                  contato@elephoto.com
+                  contato@elephotu.com
                 </a>
               </div>
             </div>
