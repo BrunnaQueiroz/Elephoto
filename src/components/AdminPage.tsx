@@ -2,6 +2,7 @@ import { useState } from 'react';
 import imageCompression from 'browser-image-compression';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
+import { Eye, EyeOff } from 'lucide-react';
 import {
   Upload,
   Plus,
@@ -25,6 +26,7 @@ export function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [uploadMode, setUploadMode] = useState<
     'selection' | 'private' | 'public' | 'manage'
   >('selection');
@@ -171,11 +173,13 @@ export function AdminPage() {
   };
 
   // --- UPLOAD COM VALIDAÇÃO E COMPRESSÃO ---
+  // --- UPLOAD COM VALIDAÇÃO E COMPRESSÃO ---
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const token = newToken.trim().toUpperCase();
 
+    // Se for modo privado, exige validação do código
     if (uploadMode === 'private') {
       const regex = /^[A-Z]{3}[0-9]{4}$/;
       if (!regex.test(token)) {
@@ -194,23 +198,45 @@ export function AdminPage() {
 
     try {
       let cardId = null;
-      let folderName = 'public_gallery';
+      let folderName = 'public_gallery'; // Pasta padrão para fotos públicas
 
+      // Se for privado, cria ou recupera o Card no banco
       if (uploadMode === 'private') {
-        folderName = token;
-        const { data: cardData, error: cardError } = await supabase
-          .from('cards')
-          .insert([{ code: token }])
-          .select()
-          .single();
+        folderName = token; // Pasta com o nome do código
 
-        if (cardError) {
-          if (cardError.code === '23505') {
-            throw new Error('Este código já existe! Tente outro.');
+        // 1. Verifica se o álbum já existe no banco
+        const { data: existingCard, error: searchError } = await supabase
+          .from('cards')
+          .select('id')
+          .eq('code', token)
+          .maybeSingle();
+
+        if (searchError) throw searchError;
+
+        if (existingCard) {
+          // 2. Se existir, exibe o alerta de confirmação
+          const confirmAdd = window.confirm(
+            `O álbum ${token} já existe! Deseja adicionar estas novas fotos a ele?`
+          );
+
+          if (!confirmAdd) {
+            // Se o fotógrafo clicar em "Cancelar", abortamos o upload
+            setLoading(false);
+            return;
           }
-          throw cardError;
+          // Se clicar em "OK", usamos o ID do álbum existente
+          cardId = existingCard.id;
+        } else {
+          // 3. Se não existir, cria um novo álbum normalmente
+          const { data: newCard, error: insertError } = await supabase
+            .from('cards')
+            .insert([{ code: token }])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+          cardId = newCard.id;
         }
-        cardId = cardData.id;
       }
 
       const uploadedPhotos = [];
@@ -220,6 +246,7 @@ export function AdminPage() {
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const timestamp = Date.now();
 
+        // PASSO A: COMPRESSÃO
         const compressionOptions = {
           maxSizeMB: 0.3,
           maxWidthOrHeight: 1080,
@@ -227,6 +254,7 @@ export function AdminPage() {
         };
         const compressedFile = await imageCompression(file, compressionOptions);
 
+        // PASSO B: MARCA D'ÁGUA
         const watermarkedBlob = await applyWatermark(compressedFile);
         const watermarkedFile = new File(
           [watermarkedBlob],
@@ -234,17 +262,21 @@ export function AdminPage() {
           { type: 'image/jpeg' }
         );
 
+        // Define os nomes dos arquivos organizados na pasta correta
         const fileNameOriginal = `${folderName}/original_${timestamp}_${i}_${safeFileName}`;
         const fileNamePublic = `${folderName}/display_${timestamp}_${i}.jpg`;
 
+        // Upload Original
         await supabase.storage.from('photos').upload(fileNameOriginal, file);
 
+        // Upload Vitrine
         const { error: uploadError } = await supabase.storage
           .from('photos')
           .upload(fileNamePublic, watermarkedFile);
 
         if (uploadError) throw uploadError;
 
+        // Pega URLs
         const {
           data: { publicUrl: thumbUrl },
         } = supabase.storage.from('photos').getPublicUrl(fileNamePublic);
@@ -252,6 +284,7 @@ export function AdminPage() {
           data: { publicUrl: origUrl },
         } = supabase.storage.from('photos').getPublicUrl(fileNameOriginal);
 
+        // Monta o objeto da foto dependendo do modo
         uploadedPhotos.push({
           url: origUrl,
           thumbnail_url: thumbUrl,
@@ -263,6 +296,7 @@ export function AdminPage() {
         });
       }
 
+      // Salva no banco de dados
       const { error: photosError } = await supabase
         .from('photos')
         .insert(uploadedPhotos);
@@ -321,12 +355,26 @@ export function AdminPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Senha
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
             {status?.type === 'error' && (
               <p className="text-red-500 text-sm text-center">{status.msg}</p>

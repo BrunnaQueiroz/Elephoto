@@ -483,6 +483,15 @@ export function HomePage() {
           </div>
 
           <div className="text-center mt-16 pt-8 border-t border-gray-200">
+            <p className="text-sm text-gray-500">
+              Precisa de ajuda com suas fotos? Fale com a gente:{' '}
+              <a
+                href="mailto:contato@elephoto.com"
+                className="font-medium text-gray-900 hover:text-slate-600 transition-colors underline decoration-transparent hover:decoration-slate-400 underline-offset-4"
+              >
+                contato@elephoto.com
+              </a>
+            </p>
             <p className="text-gray-400 text-xs">
               © 2026 Elephoto. Todos os direitos reservados.
             </p>
