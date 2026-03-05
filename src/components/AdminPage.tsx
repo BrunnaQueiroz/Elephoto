@@ -24,7 +24,6 @@ import {
 export function AdminPage() {
   const { setCurrentView } = useApp();
 
-  // Estados de Autenticação e Navegação
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +32,6 @@ export function AdminPage() {
     'selection' | 'private' | 'public' | 'manage'
   >('selection');
 
-  // Estados do Formulário de Upload
   const [newToken, setNewToken] = useState('');
   const [files, setFiles] = useState<FileList | null>(null);
   const [description, setDescription] = useState('');
@@ -43,14 +41,12 @@ export function AdminPage() {
     msg: string;
   } | null>(null);
 
-  // Estados para o Gerenciador de Vitrine
   const [publicGallery, setPublicGallery] = useState<any[]>([]);
   const [descInputs, setDescInputs] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [editingIds, setEditingIds] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState({ show: false, msg: '' });
 
-  // Estado do Modal de Confirmação de Álbum Existente
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
     token: string;
@@ -60,7 +56,6 @@ export function AdminPage() {
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.toUpperCase();
     let formattedCode = '';
-
     for (let i = 0; i < rawValue.length; i++) {
       const char = rawValue[i];
       if (formattedCode.length < 3) {
@@ -95,23 +90,17 @@ export function AdminPage() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-
         canvas.width = img.width;
         canvas.height = img.height;
-
         ctx.drawImage(img, 0, 0);
-
         const fontSize = Math.floor(img.width * 0.15);
         ctx.font = `bold ${fontSize}px sans-serif`;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate((-45 * Math.PI) / 180);
-
         ctx.fillText('ELEPHOTO', 0, 0);
-
         canvas.toBlob(
           blob => {
             if (blob) resolve(blob);
@@ -131,11 +120,8 @@ export function AdminPage() {
         .select('*')
         .eq('is_public', true)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
-
       setPublicGallery(data || []);
-
       const initialInputs: Record<string, string> = {};
       data?.forEach(p => {
         initialInputs[p.id] = p.description || '';
@@ -152,20 +138,15 @@ export function AdminPage() {
     setUpdatingId(photoId);
     try {
       const newDesc = descInputs[photoId]?.trim() || null;
-
       const { error } = await supabase
         .from('photos')
         .update({ description: newDesc })
         .eq('id', photoId);
-
       if (error) throw error;
-
       setPublicGallery(prev =>
         prev.map(p => (p.id === photoId ? { ...p, description: newDesc } : p))
       );
-
       setEditingIds(prev => ({ ...prev, [photoId]: false }));
-
       setToast({ show: true, msg: 'Descrição salva com sucesso!' });
       setTimeout(() => setToast({ show: false, msg: '' }), 3000);
     } catch (err) {
@@ -177,41 +158,33 @@ export function AdminPage() {
 
   const executeUpload = async (cardId: string | null, folderName: string) => {
     if (!files || files.length === 0) return;
-
     setLoading(true);
     setConfirmModal(null);
-
     try {
       const uploadedPhotos = [];
-
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const timestamp = Date.now();
-
         const compressionOptions = {
           maxSizeMB: 0.3,
           maxWidthOrHeight: 1080,
           useWebWorker: true,
         };
         const compressedFile = await imageCompression(file, compressionOptions);
-
         const watermarkedBlob = await applyWatermark(compressedFile);
         const watermarkedFile = new File(
           [watermarkedBlob],
           `wm_${safeFileName}`,
           { type: 'image/jpeg' }
         );
-
         const fileNameOriginal = `${folderName}/original_${timestamp}_${i}_${safeFileName}`;
         const fileNamePublic = `${folderName}/display_${timestamp}_${i}.jpg`;
 
         await supabase.storage.from('photos').upload(fileNameOriginal, file);
-
         const { error: uploadError } = await supabase.storage
           .from('photos')
           .upload(fileNamePublic, watermarkedFile);
-
         if (uploadError) throw uploadError;
 
         const {
@@ -235,7 +208,6 @@ export function AdminPage() {
       const { error: photosError } = await supabase
         .from('photos')
         .insert(uploadedPhotos);
-
       if (photosError) throw photosError;
 
       setStatus({
@@ -244,7 +216,6 @@ export function AdminPage() {
           uploadMode === 'public' ? 'pública' : folderName
         }.`,
       });
-
       setNewToken('');
       setFiles(null);
       setDescription('');
@@ -265,22 +236,18 @@ export function AdminPage() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const token = newToken.trim().toUpperCase();
-
     if (uploadMode === 'private') {
       const regex = /^[A-Z]{3}[0-9]{4}$/;
       if (!regex.test(token)) {
         setStatus({
           type: 'error',
-          msg: 'O código deve ter exatamente 3 letras seguidas de 4 números (Ex: ABC1234).',
+          msg: 'O código deve ter exatamente 3 letras seguidas de 4 números.',
         });
         return;
       }
     }
-
     if (!files || files.length === 0) return;
-
     setLoading(true);
     setStatus(null);
 
@@ -391,7 +358,7 @@ export function AdminPage() {
     );
   }
 
-  // --- TELA 2: DASHBOARD (SELEÇÃO) ---
+  // --- TELA 2: DASHBOARD COM 3 BOTÕES ---
   if (uploadMode === 'selection') {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -461,6 +428,7 @@ export function AdminPage() {
               </div>
             </button>
 
+            {/* BOTÃO DE GERENCIAR VITRINE RESTAURADO AQUI */}
             <button
               onClick={() => {
                 setUploadMode('manage');
@@ -489,7 +457,7 @@ export function AdminPage() {
     );
   }
 
-  // --- TELA 3.5: GERENCIAR VITRINE ---
+  // --- TELA 3: GERENCIAR VITRINE ---
   if (uploadMode === 'manage') {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -509,6 +477,7 @@ export function AdminPage() {
         </header>
 
         <main className="max-w-6xl mx-auto p-6 mt-6 relative">
+          {/* TOAST CUSTOMIZADO EM VEZ DE ALERTA NATIVO */}
           {toast.show && (
             <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50">
               <CheckCircle className="w-5 h-5 text-green-400" />
@@ -530,7 +499,6 @@ export function AdminPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {publicGallery.map(photo => {
                 const isEditing = editingIds[photo.id] || !photo.description;
-
                 return (
                   <div
                     key={photo.id}
@@ -543,7 +511,6 @@ export function AdminPage() {
                         className="w-full h-full object-cover"
                       />
                     </div>
-
                     <div className="p-4 flex flex-col flex-1 gap-3">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -564,7 +531,6 @@ export function AdminPage() {
                           </button>
                         )}
                       </div>
-
                       {isEditing ? (
                         <>
                           <textarea
@@ -626,13 +592,13 @@ export function AdminPage() {
     );
   }
 
-  // --- TELA 4: FORMULÁRIO DE UPLOAD ---
+  // --- TELA 4: UPLOAD DE FOTOS ---
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* MODAL DE CONFIRMAÇÃO PARA ÁLBUM EXISTENTE */}
+      {/* MODAL CUSTOMIZADO EM VEZ DE ALERTA NATIVO (Álbum já existente) */}
       {confirmModal && confirmModal.show && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl animate-in fade-in zoom-in">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-6">
               <AlertCircle className="w-8 h-8 text-blue-600" />
             </div>

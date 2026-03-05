@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 import { HowItWorks } from './HowItWorks';
+import { ContactSection } from './ContactSection';
 import {
   Shield,
   Camera,
@@ -437,6 +438,7 @@ export function HomePage() {
           </p>
         </div>
       </RevealOnScroll>
+      <ContactSection />
 
       {/* FEATURES SECTION (Rodapé Cinza Claro) */}
       <RevealOnScroll>
