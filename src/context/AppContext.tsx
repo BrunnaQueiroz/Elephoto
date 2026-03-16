@@ -57,19 +57,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const cartTotal = cart.reduce((total, _, index) => {
     const posicao = index + 1; // 1ª foto, 2ª foto, etc.
-    // const precoBase = 6.9;
+    // const precoBase = 4,99;
     const precoBase = 4.99;
 
-    if (posicao >= 6) {
+    if (posicao >= 7) {
       // Da sexta foto em diante, valor fixo
       return total + 1.99;
     }
 
-    // Cálculo da progressão: cada foto custa 80% da anterior
-    // Foto 1: 6.90 * (0.8 ^ 0) = 6.90
-    // Foto 2: 6.90 * (0.8 ^ 1) = 5.52
-    // Foto 3: 6.90 * (0.8 ^ 2) = 4.416...
-    const precoDaFoto = precoBase * Math.pow(0.8, index);
+    // Cálculo da progressão: cada foto custa 84% da anterior
+
+    const precoDaFoto = precoBase * Math.pow(0.84, index);
     return total + precoDaFoto;
   }, 0);
 
