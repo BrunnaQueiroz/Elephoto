@@ -530,11 +530,23 @@ export function GalleryPage() {
             className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center"
             onClick={e => e.stopPropagation()}
           >
-            <img
+            {/* <img
               src={selectedPhoto.url || selectedPhoto.thumbnail_url}
               alt="Visualização ampliada"
               className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-            />
+            /> */}
+            <div
+              className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <img
+                src={selectedPhoto.thumbnail_url}
+                alt="Visualização ampliada"
+                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl select-none"
+                onContextMenu={e => e.preventDefault()}
+                draggable={false}
+              />
+            </div>
           </div>
 
           {/* BARRA INFERIOR ATUALIZADA COM DESCRIÇÃO */}
