@@ -156,7 +156,7 @@ export function GalleryPage() {
     if (!isDragging.current || !scrollContainerRef.current) return;
     e.preventDefault();
     const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (startX.current - x) * 1.5; // Ajuste de velocidade do arraste
+    const walk = (startX.current - x) * 1.5;
     scrollContainerRef.current.scrollLeft = scrollLeftStart.current + walk;
   };
 

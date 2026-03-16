@@ -128,9 +128,9 @@ export function Cart({ isOpen, onClose }: CartProps) {
     try {
       const cartWithDiscount = cart.map((photo, index) => {
         const posicao = index + 1;
-        const precoBase = 6.9;
+        const precoBase = 4.99;
         const precoExibicao =
-          posicao >= 6 ? 1.99 : precoBase * Math.pow(0.8, index);
+          posicao >= 7 ? 1.99 : precoBase * Math.pow(0.84, index);
 
         return {
           ...photo,
