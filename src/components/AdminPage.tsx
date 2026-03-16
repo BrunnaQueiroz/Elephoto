@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  X,
 } from 'lucide-react';
 
 export function AdminPage() {
@@ -46,25 +47,31 @@ export function AdminPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [editingIds, setEditingIds] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState({ show: false, msg: '' });
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
     token: string;
     cardId: string;
   } | null>(null);
+  // ANTERIOR, COM REGRAS DE VALIDAÇÃO
+  // const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const rawValue = e.target.value.toUpperCase();
+  //   let formattedCode = '';
+  //   for (let i = 0; i < rawValue.length; i++) {
+  //     const char = rawValue[i];
+  //     if (formattedCode.length < 3) {
+  //       if (/[A-Z]/.test(char)) formattedCode += char;
+  //     } else if (formattedCode.length < 7) {
+  //       if (/[0-9]/.test(char)) formattedCode += char;
+  //     }
+  //   }
+  //   setNewToken(formattedCode);
+  // };
 
+  // ATUAL
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.toUpperCase();
-    let formattedCode = '';
-    for (let i = 0; i < rawValue.length; i++) {
-      const char = rawValue[i];
-      if (formattedCode.length < 3) {
-        if (/[A-Z]/.test(char)) formattedCode += char;
-      } else if (formattedCode.length < 7) {
-        if (/[0-9]/.test(char)) formattedCode += char;
-      }
-    }
-    setNewToken(formattedCode);
+    setNewToken(e.target.value.toUpperCase());
   };
 
   const setError = (msg: string | null) => {
@@ -167,7 +174,7 @@ export function AdminPage() {
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const timestamp = Date.now();
         const compressionOptions = {
-          maxSizeMB: 0.3,
+          maxSizeMB: 0.6,
           maxWidthOrHeight: 1080,
           useWebWorker: true,
         };
@@ -237,16 +244,16 @@ export function AdminPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = newToken.trim().toUpperCase();
-    if (uploadMode === 'private') {
-      const regex = /^[A-Z]{3}[0-9]{4}$/;
-      if (!regex.test(token)) {
-        setStatus({
-          type: 'error',
-          msg: 'O código deve ter exatamente 3 letras seguidas de 4 números.',
-        });
-        return;
-      }
-    }
+    // if (uploadMode === 'private') {
+    //   const regex = /^[A-Z]{3}[0-9]{4}$/;
+    //   if (!regex.test(token)) {
+    //     setStatus({
+    //       type: 'error',
+    //       msg: 'O código deve ter exatamente 3 letras seguidas de 4 números.',
+    //     });
+    //     return;
+    //   }
+    // }
     if (!files || files.length === 0) return;
     setLoading(true);
     setStatus(null);
@@ -512,18 +519,22 @@ export function AdminPage() {
                     {/* --- INFO DO FOTÓGRAFO (ABAIXO DA FOTO) --- */}
                     <div className="mt-3 flex items-center gap-3 px-1">
                       {/* Foto de Perfil Circular */}
-                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-100 shadow-sm">
+                      <div
+                        onClick={() => setShowProfileModal(true)}
+                        className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-100 shadow-sm cursor-pointer hover:scale-110 transition-transform duration-200"
+                        title="Ampliar foto"
+                      >
                         <img
-                          src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop"
+                          src="/J. D.jpeg"
                           alt="Jorge Lambert"
-                          className="w-full h-auto object-cover"
+                          className="w-full h-full object-cover"
                         />
                       </div>
 
                       {/* Nome e Tag */}
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-gray-900 leading-tight">
-                          Jorge Lambert
+                          J. D'Allambert
                         </span>
                         <span className="text-[10px] text-blue-500 font-medium uppercase tracking-wider">
                           Fotógrafo Parceiro
@@ -607,6 +618,33 @@ export function AdminPage() {
             </div>
           )}
         </main>
+        {/* MODAL DA FOTO DE PERFIL */}
+        {showProfileModal && (
+          <div
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={() => setShowProfileModal(false)} // Fecha se clicar fora da foto
+          >
+            <div
+              className="relative max-w-sm w-full animate-in zoom-in-95 duration-300"
+              onClick={e => e.stopPropagation()} // Evita fechar se clicar na própria foto
+            >
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors p-2"
+                title="Fechar"
+              >
+                {/* Lembre-se de importar o ícone X do lucide-react */}
+                <X className="w-8 h-8" />
+              </button>
+
+              <img
+                src="/J. D.jpeg"
+                alt="Jorge Lambert Ampliado"
+                className="w-full h-auto rounded-2xl shadow-2xl border border-white/10"
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -703,14 +741,14 @@ export function AdminPage() {
                   type="text"
                   value={newToken}
                   onChange={handleTokenChange}
-                  maxLength={7}
+                  maxLength={12}
                   placeholder="EX: ABC1234"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none uppercase font-semibold tracking-widest font-mono"
                   disabled={loading}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                {/* <p className="text-xs text-gray-500 mt-1">
                   Obrigatório: Exatamente 3 letras seguidas de 4 números.
-                </p>
+                </p> */}
               </div>
             )}
 
