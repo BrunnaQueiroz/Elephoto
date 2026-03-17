@@ -20,6 +20,7 @@ import {
   Eye,
   EyeOff,
   X,
+  Trash2, // <-- Ícone de lixeira adicionado
 } from 'lucide-react';
 
 export function AdminPage() {
@@ -49,27 +50,21 @@ export function AdminPage() {
   const [toast, setToast] = useState({ show: false, msg: '' });
   const [showProfileModal, setShowProfileModal] = useState(false);
 
+  // Estados para o Modal de Exclusão
+  const [deleteModal, setDeleteModal] = useState<{
+    show: boolean;
+    photoId: string | null;
+  }>({ show: false, photoId: null });
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
     token: string;
     cardId: string;
   } | null>(null);
-  // ANTERIOR, COM REGRAS DE VALIDAÇÃO
-  // const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const rawValue = e.target.value.toUpperCase();
-  //   let formattedCode = '';
-  //   for (let i = 0; i < rawValue.length; i++) {
-  //     const char = rawValue[i];
-  //     if (formattedCode.length < 3) {
-  //       if (/[A-Z]/.test(char)) formattedCode += char;
-  //     } else if (formattedCode.length < 7) {
-  //       if (/[0-9]/.test(char)) formattedCode += char;
-  //     }
-  //   }
-  //   setNewToken(formattedCode);
-  // };
 
-  // ATUAL
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewToken(e.target.value.toUpperCase());
   };
@@ -163,6 +158,41 @@ export function AdminPage() {
     }
   };
 
+  // --- NOVA FUNÇÃO DE EXCLUSÃO ---
+  const confirmDelete = async () => {
+    if (deletePassword !== '1502') {
+      setDeleteError('Senha incorreta. Tente novamente.');
+      return;
+    }
+    if (!deleteModal.photoId) return;
+
+    setIsDeleting(true);
+    setDeleteError('');
+
+    try {
+      const { error } = await supabase
+        .from('photos')
+        .delete()
+        .eq('id', deleteModal.photoId);
+
+      if (error) throw error;
+
+      // Atualiza a galeria na tela
+      setPublicGallery(prev => prev.filter(p => p.id !== deleteModal.photoId));
+
+      // Fecha o modal e limpa os estados
+      setDeleteModal({ show: false, photoId: null });
+      setDeletePassword('');
+      setToast({ show: true, msg: 'Foto excluída com sucesso!' });
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000);
+    } catch (err) {
+      console.error('Erro ao excluir:', err);
+      setDeleteError('Erro de conexão ao excluir. Tente novamente.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const executeUpload = async (cardId: string | null, folderName: string) => {
     if (!files || files.length === 0) return;
     setLoading(true);
@@ -244,16 +274,7 @@ export function AdminPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = newToken.trim().toUpperCase();
-    // if (uploadMode === 'private') {
-    //   const regex = /^[A-Z]{3}[0-9]{4}$/;
-    //   if (!regex.test(token)) {
-    //     setStatus({
-    //       type: 'error',
-    //       msg: 'O código deve ter exatamente 3 letras seguidas de 4 números.',
-    //     });
-    //     return;
-    //   }
-    // }
+
     if (!files || files.length === 0) return;
     setLoading(true);
     setStatus(null);
@@ -467,6 +488,63 @@ export function AdminPage() {
   if (uploadMode === 'manage') {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
+        {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+        {deleteModal.show && (
+          <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in">
+              <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                <Trash2 className="w-8 h-8 text-red-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Excluir Foto?
+              </h2>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                Esta ação apagará a foto do sistema. Digite a senha de
+                autorização para confirmar.
+              </p>
+
+              <input
+                type="password"
+                placeholder="Senha"
+                value={deletePassword}
+                onChange={e => setDeletePassword(e.target.value)}
+                className="w-full px-4 py-3 mb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-center tracking-widest text-lg font-mono"
+              />
+
+              {deleteError && (
+                <p className="text-red-500 text-sm mb-4 animate-in fade-in">
+                  {deleteError}
+                </p>
+              )}
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setDeleteModal({ show: false, photoId: null });
+                    setDeletePassword('');
+                    setDeleteError('');
+                  }}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-colors"
+                  disabled={isDeleting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={isDeleting || !deletePassword}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-xl transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    'Excluir'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <button
@@ -507,7 +585,7 @@ export function AdminPage() {
                 return (
                   <div
                     key={photo.id}
-                    className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full"
+                    className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full group" // Group adicionado aqui
                   >
                     <div className="h-56 w-full bg-gray-100 relative flex-shrink-0">
                       <img
@@ -515,6 +593,17 @@ export function AdminPage() {
                         alt="Foto"
                         className="w-full h-full object-cover"
                       />
+
+                      {/* BOTÃO DE LIXEIRA */}
+                      <button
+                        onClick={() =>
+                          setDeleteModal({ show: true, photoId: photo.id })
+                        }
+                        className="absolute top-2 right-2 p-2 bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200"
+                        title="Excluir foto"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                     {/* --- INFO DO FOTÓGRAFO (ABAIXO DA FOTO) --- */}
                     <div className="mt-3 flex items-center gap-3 px-1">
@@ -633,7 +722,6 @@ export function AdminPage() {
                 className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors p-2"
                 title="Fechar"
               >
-                {/* Lembre-se de importar o ícone X do lucide-react */}
                 <X className="w-8 h-8" />
               </button>
 
@@ -742,13 +830,10 @@ export function AdminPage() {
                   value={newToken}
                   onChange={handleTokenChange}
                   maxLength={12}
-                  placeholder="EX: ABC1234"
+                  placeholder="EX: MEUALBUM123"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none uppercase font-semibold tracking-widest font-mono"
                   disabled={loading}
                 />
-                {/* <p className="text-xs text-gray-500 mt-1">
-                  Obrigatório: Exatamente 3 letras seguidas de 4 números.
-                </p> */}
               </div>
             )}
 
@@ -817,7 +902,7 @@ export function AdminPage() {
               type="submit"
               disabled={
                 loading ||
-                (uploadMode === 'private' && newToken.length !== 7) ||
+                (uploadMode === 'private' && newToken.trim() === '') ||
                 !files
               }
               className={`w-full text-white py-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${

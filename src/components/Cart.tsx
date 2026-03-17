@@ -42,8 +42,8 @@ export function Cart({ isOpen, onClose }: CartProps) {
         const { data, error } = await supabase
           .from('photos')
           .select('*')
-          .eq('is_public', true)
-          .limit(10);
+          .eq('is_public', true);
+        // .limit(10);
 
         if (data) {
           setPublicPhotos(data);
