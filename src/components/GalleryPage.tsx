@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-
 import { useApp } from '../context/AppContext';
 import { supabase, Photo } from '../lib/supabase';
 import {
@@ -26,7 +25,7 @@ export function GalleryPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [albumCode, setAlbumCode] = useState('');
 
-  // Controla qual foto está aberta no modal (aceita fotos da galeria ou públicas)
+  // Controla qual foto está aberta no modal
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
   // --- ESTADOS E REFS DA VITRINE "VOCÊ TAMBÉM PODE GOSTAR" ---
@@ -37,31 +36,9 @@ export function GalleryPage() {
   const scrollLeftStart = useRef(0);
   const isDragging = useRef(false);
 
-  // Busca as fotos do cliente e as fotos públicas
-  // useEffect(() => {
-  //   fetchPhotos();
-  //   fetchPublicPhotos();
-  // }, []);
   useEffect(() => {
     fetchPhotos();
   }, []);
-
-  // Função para buscar as fotos públicas da vitrine
-  // const fetchPublicPhotos = async () => {
-  //   try {
-  //     const { data, error } = await supabase
-  //       .from('photos')
-  //       .select('*')
-  //       .eq('is_public', true);
-  //     // .limit(10);
-
-  //     if (data) {
-  //       setPublicPhotos(data);
-  //     }
-  //   } catch (err) {
-  //     console.error('Erro ao buscar fotos públicas:', err);
-  //   }
-  // };
 
   const fetchPhotos = async () => {
     try {
@@ -91,6 +68,7 @@ export function GalleryPage() {
         return;
       }
 
+      // 1. Busca as fotos privadas do cliente
       const { data: photosData, error: photosError } = await supabase
         .from('photos')
         .select('*')
@@ -98,17 +76,8 @@ export function GalleryPage() {
 
       if (photosError) throw photosError;
       setPhotos(photosData || []);
-      // ... (código existente da fetchPhotos) ...
-      const { data: photosData, error: photosError } = await supabase
-        .from('photos')
-        .select('*')
-        .eq('card_id', cardData.id);
 
-      if (photosError) throw photosError;
-      setPhotos(photosData || []);
-
-      // 👇 COLE ESTE BLOCO NOVO AQUI 👇
-      // Busca as fotos recomendadas (upsells) cruzando com a tabela photos
+      // 2. Busca as fotos recomendadas (upsells) cruzando com a tabela photos
       const { data: upsellsData, error: upsellsError } = await supabase
         .from('card_upsells')
         .select('photos(*)')
@@ -123,7 +92,6 @@ export function GalleryPage() {
           .filter(Boolean) as Photo[];
         setPublicPhotos(recommendedPhotos);
       }
-      // ☝️ FIM DO BLOCO NOVO ☝️
     } catch (err) {
       console.error('Erro ao buscar fotos:', err);
       setError('Ocorreu um erro ao carregar as fotos. Tente novamente.');
@@ -171,14 +139,11 @@ export function GalleryPage() {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Só inicia arraste se clicar com botão esquerdo
     if (e.button !== 0) return;
     setIsCarouselPaused(true);
     isDragging.current = true;
     startX.current = e.pageX - scrollContainerRef.current!.offsetLeft;
     scrollLeftStart.current = scrollContainerRef.current!.scrollLeft;
-
-    // Impede seleção de texto durante o arraste
     e.preventDefault();
   };
 
@@ -195,17 +160,14 @@ export function GalleryPage() {
     setIsCarouselPaused(false);
   };
 
-  // Verificação de itens no carrinho
   const isInCart = (photoId: string) => cart.some(p => p.id === photoId);
 
-  // Função auxiliar para renderizar botões
   const renderCartButton = (photo: Photo, isLarge = false) => {
     const selected = isInCart(photo.id);
     return (
       <button
         onClick={e => {
           e.stopPropagation();
-
           if (selected) {
             removeFromCart(photo.id);
           } else {
@@ -272,7 +234,6 @@ export function GalleryPage() {
       );
       if (!confirmLeave) return;
     }
-
     clearCart();
     localStorage.removeItem('elephoto_code');
     setCurrentView('home');
@@ -288,7 +249,7 @@ export function GalleryPage() {
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">Sair do Álbum</span>{' '}
+            <span className="hidden sm:inline">Sair do Álbum</span>
           </button>
 
           <div className="text-center">
@@ -312,7 +273,7 @@ export function GalleryPage() {
         </div>
       </header>
 
-      {/* GRID DE FOTOS */}
+      {/* GRID DE FOTOS PRIVADAS */}
       <main className="max-w-6xl mx-auto p-4 py-8">
         {photos.length === 0 ? (
           <div className="text-center py-20">
@@ -377,14 +338,14 @@ export function GalleryPage() {
           </div>
         )}
 
+        {/* CARROSSEL "VOCÊ TAMBÉM PODE GOSTAR" */}
         {availableUpsells.length > 0 && (
           <div className="mt-16 pt-10 border-t border-gray-200 relative group animate-in fade-in duration-700">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-wide">
-              <Sparkles className="w-6 h-6 text-pink-500" />
-              Você também pode gostar
+              <Sparkles className="w-6 h-6 text-pink-500" /> Você também pode
+              gostar
             </h2>
 
-            {/* SETA ESQUERDA */}
             <button
               onClick={() => scrollByAmount(-200)}
               onMouseEnter={() => setIsCarouselPaused(true)}
@@ -394,7 +355,6 @@ export function GalleryPage() {
               <ChevronLeft className="w-6 h-6" />
             </button>
 
-            {/* CONTAINER ROLÁVEL */}
             <div
               ref={scrollContainerRef}
               onMouseDown={handleMouseDown}
@@ -418,32 +378,16 @@ export function GalleryPage() {
                     <img
                       src={photo.thumbnail_url}
                       className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
-                      alt="Foto Extra"
+                      alt={photo.description || 'Foto Extra'}
                       draggable={false}
                     />
-                    {/* Overlay de zoom no hover para dar feedback visual */}
-                    {/* <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover/item:opacity-100">
-                      <Maximize2 className="text-white w-6 h-6 drop-shadow-lg" />
-                    </div> */}
-                    <div
-                      className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-200 shadow-sm group-hover/item:shadow-md transition-shadow relative cursor-zoom-in"
-                      onClick={() => setSelectedPhoto(photo)}
-                    >
-                      <img
-                        src={photo.thumbnail_url}
-                        className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
-                        alt={photo.description || 'Foto Extra'}
-                        draggable={false}
-                      />
-                      {/* Overlay de zoom e descrição no hover */}
-                      <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/60 transition-colors flex flex-col items-center justify-center opacity-0 group-hover/item:opacity-100 p-4 text-center">
-                        <Maximize2 className="text-white w-6 h-6 drop-shadow-lg mb-2" />
-                        {photo.description && (
-                          <p className="text-white text-xs font-medium drop-shadow-md line-clamp-3">
-                            {photo.description}
-                          </p>
-                        )}
-                      </div>
+                    <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/60 transition-colors flex flex-col items-center justify-center opacity-0 group-hover/item:opacity-100 p-4 text-center">
+                      <Maximize2 className="text-white w-6 h-6 drop-shadow-lg mb-2" />
+                      {photo.description && (
+                        <p className="text-white text-xs font-medium drop-shadow-md line-clamp-3">
+                          {photo.description}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -457,7 +401,6 @@ export function GalleryPage() {
               ))}
             </div>
 
-            {/* SETA DIREITA */}
             <button
               onClick={() => scrollByAmount(200)}
               onMouseEnter={() => setIsCarouselPaused(true)}
@@ -466,7 +409,8 @@ export function GalleryPage() {
             >
               <ChevronRight className="w-6 h-6" />
             </button>
-            {/* --- AVISO DE USO NÃO COMERCIAL --- */}
+
+            {/* AVISO DE USO NÃO COMERCIAL DA VITRINE */}
             <div className="max-w-4xl mx-auto mt-12 mb-8 px-6">
               <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
@@ -508,42 +452,7 @@ export function GalleryPage() {
         )}
       </main>
 
-      {/* MODAL / LIGHTBOX (VISUALIZAÇÃO AMPLIADA) */}
-
-      {/* {selectedPhoto && (
-        <div
-          className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setSelectedPhoto(null)}
-        >
-          <button
-            onClick={() => setSelectedPhoto(null)}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-50"
-          >
-            <X className="w-8 h-8" />
-          </button>
-
-          <div
-            className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center"
-            onClick={e => e.stopPropagation()}
-          >
-            <img
-              src={selectedPhoto.url || selectedPhoto.thumbnail_url}
-              alt="Visualização ampliada"
-              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-            />
-          </div>
-
-          <div
-            className="mt-6 flex items-center gap-6"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="text-white text-center">
-              <p className="text-sm opacity-70">Foto Digital</p>
-            </div>
-            {renderCartButton(selectedPhoto, true)}
-          </div>
-        </div>
-      )} */}
+      {/* MODAL / LIGHTBOX DE VISUALIZAÇÃO AMPLIADA */}
       {selectedPhoto && (
         <div
           className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
@@ -560,11 +469,6 @@ export function GalleryPage() {
             className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center"
             onClick={e => e.stopPropagation()}
           >
-            {/* <img
-              src={selectedPhoto.url || selectedPhoto.thumbnail_url}
-              alt="Visualização ampliada"
-              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-            /> */}
             <div
               className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center"
               onClick={e => e.stopPropagation()}
@@ -579,7 +483,6 @@ export function GalleryPage() {
             </div>
           </div>
 
-          {/* BARRA INFERIOR ATUALIZADA COM DESCRIÇÃO */}
           <div
             className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 w-full max-w-5xl"
             onClick={e => e.stopPropagation()}
@@ -600,7 +503,8 @@ export function GalleryPage() {
           </div>
         </div>
       )}
-      {/* --- AVISO DE QUALIDADE DE IMPRESSÃO (TEXTO DO LAMBERT) --- */}
+
+      {/* AVISO DE QUALIDADE DE IMPRESSÃO (TEXTO DO LAMBERT) */}
       <div className="max-w-4xl mx-auto mt-4 mb-12 px-6">
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
@@ -632,7 +536,6 @@ export function GalleryPage() {
         </div>
       </div>
 
-      {/* CARRINHO */}
       <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>
   );

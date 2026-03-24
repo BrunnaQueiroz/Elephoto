@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { usePhotoUpload } from '../../hooks/usePhotoUpload';
 import {
@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   AlertCircle,
   X,
+  Check,
 } from 'lucide-react';
 
 interface PhotoUploadFormProps {
@@ -44,6 +45,26 @@ export function PhotoUploadForm({
   } | null>(null);
   const [loadingSearch, setLoadingSearch] = useState(false);
 
+  // --- NOVOS ESTADOS PARA A SEÇÃO 3 ---
+  const [publicAlbums, setPublicAlbums] = useState<any[]>([]);
+  const [selectedUpsellAlbums, setSelectedUpsellAlbums] = useState<string[]>(
+    []
+  );
+
+  // Busca os álbuns públicos caso estejamos no modo de upload para clientes
+  useEffect(() => {
+    if (uploadMode === 'private') {
+      const fetchAlbums = async () => {
+        const { data } = await supabase
+          .from('public_albums')
+          .select('*')
+          .order('name');
+        if (data) setPublicAlbums(data);
+      };
+      fetchAlbums();
+    }
+  }, [uploadMode]);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files).map(file => ({
@@ -64,6 +85,48 @@ export function PhotoUploadForm({
     });
   };
 
+  const toggleUpsellAlbum = (albumId: string) => {
+    setSelectedUpsellAlbums(prev =>
+      prev.includes(albumId)
+        ? prev.filter(id => id !== albumId)
+        : [...prev, albumId]
+    );
+  };
+
+  // Função que cruza os dados e salva as recomendações no banco
+  const saveUpsellSelections = async (cardId: string) => {
+    if (selectedUpsellAlbums.length === 0) return;
+    try {
+      // 1. Pega todas as fotos que pertencem aos álbuns selecionados
+      const { data: photos } = await supabase
+        .from('photos')
+        .select('id')
+        .in('public_album_id', selectedUpsellAlbums);
+
+      if (photos && photos.length > 0) {
+        // 2. Verifica se o cliente já tem recomendações para não duplicar
+        const { data: existingUpsells } = await supabase
+          .from('card_upsells')
+          .select('photo_id')
+          .eq('card_id', cardId);
+        const existingIds = existingUpsells
+          ? existingUpsells.map(u => u.photo_id)
+          : [];
+
+        // 3. Filtra apenas as fotos novas e insere
+        const newInserts = photos
+          .filter(p => !existingIds.includes(p.id))
+          .map(p => ({ card_id: cardId, photo_id: p.id }));
+
+        if (newInserts.length > 0) {
+          await supabase.from('card_upsells').insert(newInserts);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao salvar recomendações automáticas:', err);
+    }
+  };
+
   const processUpload = async (
     targetId: string | null,
     folderName: string,
@@ -72,6 +135,11 @@ export function PhotoUploadForm({
     setConfirmModal(null);
     setStatus(null);
     try {
+      // Salva as recomendações antes de subir as fotos (se for álbum privado)
+      if (!isPublic && targetId) {
+        await saveUpsellSelections(targetId);
+      }
+
       await uploadPhotos({
         files: selectedFiles,
         folderName,
@@ -85,10 +153,11 @@ export function PhotoUploadForm({
         msg: `Sucesso! ${selectedFiles.length} fotos enviadas.`,
       });
       setNewToken('');
+      selectedUpsellAlbums.length = 0; // Limpa a seleção
       selectedFiles.forEach(f => URL.revokeObjectURL(f.preview));
       setSelectedFiles([]);
       setDescription('');
-      setTimeout(onSuccess, 1500); // Volta para a tela anterior após 1.5s
+      setTimeout(onSuccess, 1500);
     } catch (err: any) {
       setStatus({
         type: 'error',
@@ -179,7 +248,7 @@ export function PhotoUploadForm({
                 onClick={() =>
                   processUpload(confirmModal.cardId, confirmModal.token, false)
                 }
-                className="flex-1 bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-xl transition-colors"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors"
               >
                 Sim, adicionar
               </button>
@@ -221,7 +290,7 @@ export function PhotoUploadForm({
               : 'Upload de Fotos Públicas'}
           </h2>
 
-          <form onSubmit={handleUpload} className="space-y-6">
+          <form onSubmit={handleUpload} className="space-y-8">
             {uploadMode === 'private' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -233,7 +302,7 @@ export function PhotoUploadForm({
                   onChange={e => setNewToken(e.target.value.toUpperCase())}
                   maxLength={12}
                   placeholder="EX: MEUALBUM123"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none uppercase font-semibold tracking-widest font-mono"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase font-semibold tracking-widest font-mono"
                   disabled={isBusy}
                 />
               </div>
@@ -292,6 +361,54 @@ export function PhotoUploadForm({
               )}
             </div>
 
+            {/* --- NOVA SEÇÃO 3: ÁLBUNS RECOMENDADOS --- */}
+            {uploadMode === 'private' && publicAlbums.length > 0 && (
+              <div className="animate-in fade-in duration-300 border-t border-gray-100 pt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  3. Recomendar Álbuns (Opcional)
+                </label>
+                <p className="text-xs text-gray-500 mb-4">
+                  Selecione quais álbuns aparecerão na vitrine de compra extra
+                  deste cliente.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {publicAlbums.map(album => {
+                    const isSelected = selectedUpsellAlbums.includes(album.id);
+                    return (
+                      <div
+                        key={album.id}
+                        onClick={() => !isBusy && toggleUpsellAlbum(album.id)}
+                        className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                          isSelected
+                            ? 'border-purple-500 bg-purple-50 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-purple-200'
+                        } ${isBusy ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span
+                          className={`font-semibold text-sm ${
+                            isSelected ? 'text-purple-800' : 'text-gray-700'
+                          }`}
+                        >
+                          {album.name}
+                        </span>
+                        <div
+                          className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                            isSelected
+                              ? 'bg-purple-600 border-purple-600'
+                              : 'border-gray-300 bg-white'
+                          }`}
+                        >
+                          {isSelected && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {uploadMode === 'public' && (
               <div className="animate-in fade-in duration-300">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -302,7 +419,7 @@ export function PhotoUploadForm({
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Ex: Ensaio de casamento na praia"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                   disabled={isBusy}
                 />
               </div>
@@ -312,7 +429,7 @@ export function PhotoUploadForm({
               <div
                 className={`p-4 rounded-lg text-sm text-center font-medium animate-in fade-in slide-in-from-top-2 ${
                   status.type === 'success'
-                    ? 'bg-purple-50 text-purple-700 border border-purple-200 shadow-sm'
+                    ? 'bg-green-50 text-green-700 border border-green-200 shadow-sm'
                     : 'bg-red-50 text-red-600 border border-red-100'
                 }`}
               >
@@ -327,10 +444,10 @@ export function PhotoUploadForm({
                 (uploadMode === 'private' && newToken.trim() === '') ||
                 selectedFiles.length === 0
               }
-              className={`w-full text-white py-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`w-full text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm ${
                 uploadMode === 'public'
-                  ? 'bg-emerald-600 hover:bg-emerald-700'
-                  : 'bg-gray-900 hover:bg-gray-800'
+                  ? 'bg-purple-600 hover:bg-purple-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
               {isBusy ? (
