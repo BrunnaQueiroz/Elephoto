@@ -13,6 +13,7 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Printer,
 } from 'lucide-react';
 import { Cart } from './Cart';
 
@@ -570,6 +571,37 @@ export function GalleryPage() {
           </div>
         </div>
       )}
+      {/* --- AVISO DE QUALIDADE DE IMPRESSÃO (TEXTO DO LAMBERT) --- */}
+      <div className="max-w-4xl mx-auto mt-4 mb-12 px-6">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+            <Printer className="w-6 h-6 text-slate-600" />
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              Sobre a Qualidade e Impressão
+            </h4>
+            <p className="text-sm text-slate-600 font-light leading-relaxed">
+              A proposta da Elephoto é viabilizar fotografias acessíveis de
+              qualidade diferenciada. As fotos adquiridas pelo preço padrão
+              possuem resolução ideal para{' '}
+              <strong className="font-semibold text-slate-800">
+                redes sociais e impressões em até 20x30 cm
+              </strong>{' '}
+              (aprox. A4, a 245 dpi em compressão JPEG de alta qualidade).
+            </p>
+            <p className="text-sm text-slate-600 font-light leading-relaxed">
+              Para formatos mais sofisticados (fine-art, impressões museológicas
+              ou ampliações maiores que 20x30 cm),{' '}
+              <strong className="font-semibold text-slate-800">
+                é necessário tratar diretamente com o fotógrafo
+              </strong>
+              , que poderá fornecer arquivos sem compressão ou em resolução
+              superior, mediante avaliação.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* CARRINHO */}
       <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />

@@ -20,7 +20,7 @@ import {
   Eye,
   EyeOff,
   X,
-  Trash2, // <-- Ícone de lixeira adicionado
+  Trash2,
 } from 'lucide-react';
 
 export function AdminPage() {
@@ -35,7 +35,12 @@ export function AdminPage() {
   >('selection');
 
   const [newToken, setNewToken] = useState('');
-  const [files, setFiles] = useState<FileList | null>(null);
+
+  // --- NOVO ESTADO DE ARQUIVOS COM PREVIEW ---
+  const [selectedFiles, setSelectedFiles] = useState<
+    { file: File; preview: string }[]
+  >([]);
+
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{
@@ -82,6 +87,32 @@ export function AdminPage() {
     } else {
       setError('Credenciais inválidas. ');
     }
+  };
+
+  // --- FUNÇÕES DE SELEÇÃO E REMOÇÃO DE ARQUIVOS (NOVAS) ---
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files).map(file => ({
+        file,
+        preview: URL.createObjectURL(file), // Gera a miniatura temporária
+      }));
+
+      // Adiciona as novas fotos mantendo as que já estavam lá
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+
+      // Limpa o input para permitir selecionar a mesma foto novamente se quiser
+      e.target.value = '';
+    }
+  };
+
+  const removeFile = (indexToRemove: number) => {
+    setSelectedFiles(prev => {
+      const newArray = [...prev];
+      // Limpa a memória da imagem excluída
+      URL.revokeObjectURL(newArray[indexToRemove].preview);
+      newArray.splice(indexToRemove, 1);
+      return newArray;
+    });
   };
 
   const applyWatermark = (file: File | Blob): Promise<Blob> => {
@@ -158,7 +189,6 @@ export function AdminPage() {
     }
   };
 
-  // --- NOVA FUNÇÃO DE EXCLUSÃO ---
   const confirmDelete = async () => {
     if (deletePassword !== '1502') {
       setDeleteError('Senha incorreta. Tente novamente.');
@@ -170,20 +200,40 @@ export function AdminPage() {
     setDeleteError('');
 
     try {
-      const { error } = await supabase
+      const photoToDelete = publicGallery.find(
+        p => p.id === deleteModal.photoId
+      );
+      const { data, error } = await supabase
         .from('photos')
         .delete()
-        .eq('id', deleteModal.photoId);
+        .eq('id', deleteModal.photoId)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        setDeleteError(
+          'Bloqueado pelo Supabase. Libere a permissão de DELETE (RLS) no painel.'
+        );
+        setIsDeleting(false);
+        return;
+      }
 
-      // Atualiza a galeria na tela
+      if (photoToDelete) {
+        const filesToRemove = [];
+        if (photoToDelete.filename) filesToRemove.push(photoToDelete.filename);
+        if (photoToDelete.thumbnail_url) {
+          const urlParts = photoToDelete.thumbnail_url.split('/photos/');
+          if (urlParts.length > 1) filesToRemove.push(urlParts[1]);
+        }
+        if (filesToRemove.length > 0) {
+          await supabase.storage.from('photos').remove(filesToRemove);
+        }
+      }
+
       setPublicGallery(prev => prev.filter(p => p.id !== deleteModal.photoId));
-
-      // Fecha o modal e limpa os estados
       setDeleteModal({ show: false, photoId: null });
       setDeletePassword('');
-      setToast({ show: true, msg: 'Foto excluída com sucesso!' });
+      setToast({ show: true, msg: 'Foto e arquivos excluídos com sucesso!' });
       setTimeout(() => setToast({ show: false, msg: '' }), 3000);
     } catch (err) {
       console.error('Erro ao excluir:', err);
@@ -194,13 +244,13 @@ export function AdminPage() {
   };
 
   const executeUpload = async (cardId: string | null, folderName: string) => {
-    if (!files || files.length === 0) return;
+    if (selectedFiles.length === 0) return;
     setLoading(true);
     setConfirmModal(null);
     try {
       const uploadedPhotos = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i].file;
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const timestamp = Date.now();
         const compressionOptions = {
@@ -249,17 +299,16 @@ export function AdminPage() {
 
       setStatus({
         type: 'success',
-        msg: `Sucesso! ${files.length} fotos enviadas para a galeria ${
+        msg: `Sucesso! ${selectedFiles.length} fotos enviadas para a galeria ${
           uploadMode === 'public' ? 'pública' : folderName
         }.`,
       });
       setNewToken('');
-      setFiles(null);
+
+      // Limpa os arquivos da memória e da tela após sucesso
+      selectedFiles.forEach(f => URL.revokeObjectURL(f.preview));
+      setSelectedFiles([]);
       setDescription('');
-      const fileInput = document.getElementById(
-        'file-upload'
-      ) as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
     } catch (err: any) {
       console.error(err);
       setStatus({
@@ -275,7 +324,7 @@ export function AdminPage() {
     e.preventDefault();
     const token = newToken.trim().toUpperCase();
 
-    if (!files || files.length === 0) return;
+    if (selectedFiles.length === 0) return;
     setLoading(true);
     setStatus(null);
 
@@ -488,7 +537,6 @@ export function AdminPage() {
   if (uploadMode === 'manage') {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
-        {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
         {deleteModal.show && (
           <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in">
@@ -585,7 +633,7 @@ export function AdminPage() {
                 return (
                   <div
                     key={photo.id}
-                    className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full group" // Group adicionado aqui
+                    className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full group"
                   >
                     <div className="h-56 w-full bg-gray-100 relative flex-shrink-0">
                       <img
@@ -593,8 +641,6 @@ export function AdminPage() {
                         alt="Foto"
                         className="w-full h-full object-cover"
                       />
-
-                      {/* BOTÃO DE LIXEIRA */}
                       <button
                         onClick={() =>
                           setDeleteModal({ show: true, photoId: photo.id })
@@ -605,9 +651,7 @@ export function AdminPage() {
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    {/* --- INFO DO FOTÓGRAFO (ABAIXO DA FOTO) --- */}
                     <div className="mt-3 flex items-center gap-3 px-1">
-                      {/* Foto de Perfil Circular */}
                       <div
                         onClick={() => setShowProfileModal(true)}
                         className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-100 shadow-sm cursor-pointer hover:scale-110 transition-transform duration-200"
@@ -619,8 +663,6 @@ export function AdminPage() {
                           className="w-full h-full object-cover"
                         />
                       </div>
-
-                      {/* Nome e Tag */}
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-gray-900 leading-tight">
                           J. D'Allambert
@@ -707,15 +749,14 @@ export function AdminPage() {
             </div>
           )}
         </main>
-        {/* MODAL DA FOTO DE PERFIL */}
         {showProfileModal && (
           <div
             className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
-            onClick={() => setShowProfileModal(false)} // Fecha se clicar fora da foto
+            onClick={() => setShowProfileModal(false)}
           >
             <div
               className="relative max-w-sm w-full animate-in zoom-in-95 duration-300"
-              onClick={e => e.stopPropagation()} // Evita fechar se clicar na própria foto
+              onClick={e => e.stopPropagation()}
             >
               <button
                 onClick={() => setShowProfileModal(false)}
@@ -740,7 +781,6 @@ export function AdminPage() {
   // --- TELA 4: UPLOAD DE FOTOS ---
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* MODAL CUSTOMIZADO EM VEZ DE ALERTA NATIVO (Álbum já existente) */}
       {confirmModal && confirmModal.show && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in-95 duration-200">
@@ -753,7 +793,8 @@ export function AdminPage() {
             <p className="text-gray-600 mb-8 leading-relaxed">
               O álbum{' '}
               <strong className="text-gray-900">{confirmModal.token}</strong> já
-              existe. Deseja adicionar estas {files?.length} novas fotos a ele?
+              existe. Deseja adicionar estas {selectedFiles.length} novas fotos
+              a ele?
             </p>
             <div className="flex gap-3">
               <button
@@ -784,7 +825,7 @@ export function AdminPage() {
             onClick={() => {
               setUploadMode('selection');
               setStatus(null);
-              setFiles(null);
+              setSelectedFiles([]);
               setNewToken('');
               setDescription('');
             }}
@@ -843,21 +884,23 @@ export function AdminPage() {
                   ? '2. Selecione as Fotos'
                   : '1. Selecione as Fotos'}
               </label>
+
+              {/* ÁREA DE CLICK E ARRASTAR */}
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer relative">
                 <input
                   type="file"
                   id="file-upload"
                   multiple
                   accept="image/*"
-                  onChange={e => setFiles(e.target.files)}
+                  onChange={handleFileSelect}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   disabled={loading}
                 />
                 <div className="flex flex-col items-center pointer-events-none">
                   <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
                   <p className="text-sm text-gray-600 font-medium">
-                    {files && files.length > 0
-                      ? `${files.length} arquivos selecionados`
+                    {selectedFiles.length > 0
+                      ? `${selectedFiles.length} arquivos selecionados`
                       : 'Clique ou arraste as fotos aqui'}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
@@ -865,6 +908,33 @@ export function AdminPage() {
                   </p>
                 </div>
               </div>
+
+              {/* GRID DE MINIATURAS (PREVIEW) */}
+              {selectedFiles.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 animate-in fade-in zoom-in-95 duration-200">
+                  {selectedFiles.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 shadow-sm"
+                    >
+                      <img
+                        src={item.preview}
+                        alt={`preview-${idx}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* BOTÃO DE EXCLUIR MINIATURA */}
+                      <button
+                        type="button"
+                        onClick={() => removeFile(idx)}
+                        className="absolute top-1 right-1 bg-red-500/90 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-600 hover:scale-110 transition-all shadow-md"
+                        title="Remover foto"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {uploadMode === 'public' && (
@@ -903,7 +973,7 @@ export function AdminPage() {
               disabled={
                 loading ||
                 (uploadMode === 'private' && newToken.trim() === '') ||
-                !files
+                selectedFiles.length === 0
               }
               className={`w-full text-white py-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                 uploadMode === 'public'
