@@ -319,7 +319,7 @@ export function GalleryPage() {
                         Resolução:
                       </span>
                       <span className="text-gray-900 font-semibold sm:text-right">
-                        ORIGINAL
+                        {photo.resolution || 'ORIGINAL'}
                       </span>
                     </li>
                     <li className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">

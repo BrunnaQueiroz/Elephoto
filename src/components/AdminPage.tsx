@@ -250,6 +250,19 @@ export function AdminPage() {
     }
   };
 
+  const getImageDimensions = (
+    file: File
+  ): Promise<{ width: number; height: number }> => {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+        URL.revokeObjectURL(img.src);
+      };
+    });
+  };
+
   const executeUpload = async (cardId: string | null, folderName: string) => {
     if (selectedFiles.length === 0) return;
     setLoading(true);
@@ -263,6 +276,11 @@ export function AdminPage() {
         setUploadProgress({ current: i + 1, total: selectedFiles.length });
 
         const file = selectedFiles[i].file;
+
+        // ---> 1.  RESOLUÇÃO DA FOTO ORIGINAL
+        const dimensions = await getImageDimensions(file);
+        const resolutionString = `${dimensions.width} x ${dimensions.height} px`;
+
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const timestamp = Date.now();
         const compressionOptions = {
@@ -303,6 +321,7 @@ export function AdminPage() {
           filename: fileNameOriginal,
           is_public: uploadMode === 'public',
           description: description.trim() !== '' ? description.trim() : null,
+          resolution: resolutionString, // ---> 2. SALVANDO A RESOLUÇÃO AQUI <---
           ...(uploadMode === 'private' && { card_id: cardId }),
         });
       }
