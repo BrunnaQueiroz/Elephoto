@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Loader2, Trash2, CheckCircle } from 'lucide-react';
+
+import { ArrowLeft, Loader2, Trash2, CheckCircle, Star } from 'lucide-react';
 
 interface ClientManagerProps {
   onBack: () => void;
+  onUpsell: (client: any) => void; // <--- Adicione esta linha
 }
 
-export function ClientManager({ onBack }: ClientManagerProps) {
+export function ClientManager({ onBack, onUpsell }: ClientManagerProps) {
   const [clientsList, setClientsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, msg: '' });
@@ -137,7 +139,23 @@ export function ClientManager({ onBack }: ClientManagerProps) {
                     <td className="px-6 py-4 text-gray-500">
                       {new Date(client.created_at).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => onUpsell(client)}
+                        className="text-purple-600 hover:text-white border border-purple-600 hover:bg-purple-600 font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <Star className="w-4 h-4" /> Recomendar Fotos
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleDeleteClient(client.id, client.code)
+                        }
+                        className="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" /> Excluir
+                      </button>
+                    </td>
+                    {/* <td className="px-6 py-4 text-right">
                       <button
                         onClick={() =>
                           handleDeleteClient(client.id, client.code)
@@ -146,7 +164,7 @@ export function ClientManager({ onBack }: ClientManagerProps) {
                       >
                         <Trash2 className="w-4 h-4" /> Excluir
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>

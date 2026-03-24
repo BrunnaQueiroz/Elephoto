@@ -32,30 +32,47 @@ export function Cart({ isOpen, onClose }: CartProps) {
   const scrollLeftStart = useRef(0);
   const isDragging = useRef(false);
 
-  // Busca as fotos públicas
+  // Busca as fotos recomendadas (Upsells)
   useEffect(() => {
     if (!isOpen) return;
 
-    const fetchPublicPhotos = async () => {
+    const fetchRecommendedPhotos = async () => {
       setIsLoadingUpsell(true);
       try {
-        const { data, error } = await supabase
-          .from('photos')
-          .select('*')
-          .eq('is_public', true);
-        // .limit(10);
+        const code = localStorage.getItem('elephoto_code');
+        if (!code) return;
 
-        if (data) {
-          setPublicPhotos(data);
+        // 1. Pega o ID do cartão
+        const { data: cardData } = await supabase
+          .from('cards')
+          .select('id')
+          .eq('code', code)
+          .single();
+
+        if (!cardData) return;
+
+        // 2. Busca apenas as fotos recomendadas para este cartão cruzando as tabelas
+        const { data: upsellsData, error } = await supabase
+          .from('card_upsells')
+          .select('photos(*)')
+          .eq('card_id', cardData.id);
+
+        if (!error && upsellsData) {
+          const recommendedPhotos = upsellsData
+            .map(item =>
+              Array.isArray(item.photos) ? item.photos[0] : item.photos
+            )
+            .filter(Boolean);
+          setPublicPhotos(recommendedPhotos);
         }
       } catch (err) {
-        console.error('Erro ao buscar fotos públicas:', err);
+        console.error('Erro ao buscar fotos recomendadas:', err);
       } finally {
         setIsLoadingUpsell(false);
       }
     };
 
-    fetchPublicPhotos();
+    fetchRecommendedPhotos();
   }, [isOpen]);
 
   const availableUpsells = publicPhotos.filter(

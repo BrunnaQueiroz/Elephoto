@@ -7,6 +7,7 @@ import { AlbumManager } from './admin/AlbumManager';
 import { PublicGalleryManager } from './admin/PublicGalleryManager';
 import { AlbumViewer } from './admin/AlbumViewer';
 import { PhotoUploadForm } from './admin/PhotoUploadForm';
+import { ClientUpsell } from './admin/ClientUpsell';
 
 export function AdminPage() {
   const { setCurrentView } = useApp();
@@ -20,7 +21,13 @@ export function AdminPage() {
     | 'clients'
     | 'manage_albums'
     | 'view_album'
+    | 'client_upsell'
   >('selection');
+
+  const [upsellClient, setUpsellClient] = useState<{
+    id: string;
+    code: string;
+  } | null>(null);
 
   const [selectedAlbum, setSelectedAlbum] = useState<{
     id: string;
@@ -58,13 +65,34 @@ export function AdminPage() {
         onLogout={handleLogout}
         onNavigate={mode => setUploadMode(mode)}
         clearSelectedAlbum={() => setSelectedAlbum(null)}
+        loadPublicGallery={function (): void {
+          throw new Error('Function not implemented.');
+        }}
       />
     );
   }
 
   // 3. GERENCIAR CLIENTES
   if (uploadMode === 'clients') {
-    return <ClientManager onBack={() => setUploadMode('selection')} />;
+    return (
+      <ClientManager
+        onBack={() => setUploadMode('selection')}
+        onUpsell={client => {
+          setUpsellClient(client);
+          setUploadMode('client_upsell');
+        }}
+      />
+    );
+  }
+
+  // TELA NOVA: SELECIONAR FOTOS PARA O CLIENTE (UPSELL)
+  if (uploadMode === 'client_upsell' && upsellClient) {
+    return (
+      <ClientUpsell
+        client={upsellClient}
+        onBack={() => setUploadMode('clients')}
+      />
+    );
   }
 
   // 4. GERENCIAR ÁLBUNS PÚBLICOS
@@ -112,5 +140,5 @@ export function AdminPage() {
     );
   }
 
-  return null; // Fallback de segurança
+  return null;
 }

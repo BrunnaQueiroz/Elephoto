@@ -38,27 +38,30 @@ export function GalleryPage() {
   const isDragging = useRef(false);
 
   // Busca as fotos do cliente e as fotos públicas
+  // useEffect(() => {
+  //   fetchPhotos();
+  //   fetchPublicPhotos();
+  // }, []);
   useEffect(() => {
     fetchPhotos();
-    fetchPublicPhotos();
   }, []);
 
   // Função para buscar as fotos públicas da vitrine
-  const fetchPublicPhotos = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('photos')
-        .select('*')
-        .eq('is_public', true);
-      // .limit(10);
+  // const fetchPublicPhotos = async () => {
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from('photos')
+  //       .select('*')
+  //       .eq('is_public', true);
+  //     // .limit(10);
 
-      if (data) {
-        setPublicPhotos(data);
-      }
-    } catch (err) {
-      console.error('Erro ao buscar fotos públicas:', err);
-    }
-  };
+  //     if (data) {
+  //       setPublicPhotos(data);
+  //     }
+  //   } catch (err) {
+  //     console.error('Erro ao buscar fotos públicas:', err);
+  //   }
+  // };
 
   const fetchPhotos = async () => {
     try {
@@ -95,6 +98,32 @@ export function GalleryPage() {
 
       if (photosError) throw photosError;
       setPhotos(photosData || []);
+      // ... (código existente da fetchPhotos) ...
+      const { data: photosData, error: photosError } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('card_id', cardData.id);
+
+      if (photosError) throw photosError;
+      setPhotos(photosData || []);
+
+      // 👇 COLE ESTE BLOCO NOVO AQUI 👇
+      // Busca as fotos recomendadas (upsells) cruzando com a tabela photos
+      const { data: upsellsData, error: upsellsError } = await supabase
+        .from('card_upsells')
+        .select('photos(*)')
+        .eq('card_id', cardData.id);
+
+      if (!upsellsError && upsellsData) {
+        // Extrai as fotos de dentro do objeto retornado pelo Supabase e limpa os nulos
+        const recommendedPhotos = upsellsData
+          .map(item =>
+            Array.isArray(item.photos) ? item.photos[0] : item.photos
+          )
+          .filter(Boolean) as Photo[];
+        setPublicPhotos(recommendedPhotos);
+      }
+      // ☝️ FIM DO BLOCO NOVO ☝️
     } catch (err) {
       console.error('Erro ao buscar fotos:', err);
       setError('Ocorreu um erro ao carregar as fotos. Tente novamente.');
