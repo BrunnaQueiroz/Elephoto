@@ -14,8 +14,6 @@ interface AdminDashboardProps {
   onLogout: () => void;
   onNavigate: (mode: any) => void;
   loadPublicGallery: () => void;
-  loadClients: () => void;
-  loadPublicAlbums: () => void;
   clearSelectedAlbum: () => void;
 }
 
@@ -23,8 +21,6 @@ export function AdminDashboard({
   onLogout,
   onNavigate,
   loadPublicGallery,
-  loadClients,
-  loadPublicAlbums,
   clearSelectedAlbum,
 }: AdminDashboardProps) {
   return (
@@ -119,10 +115,7 @@ export function AdminDashboard({
           </button>
 
           <button
-            onClick={() => {
-              onNavigate('clients');
-              loadClients();
-            }}
+            onClick={() => onNavigate('clients')}
             className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
           >
             <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl group-hover:scale-110 transition-transform">
@@ -142,10 +135,7 @@ export function AdminDashboard({
           </button>
 
           <button
-            onClick={() => {
-              onNavigate('manage_albums');
-              loadPublicAlbums();
-            }}
+            onClick={() => onNavigate('manage_albums')}
             className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
           >
             <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 transition-transform">
