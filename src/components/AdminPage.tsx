@@ -36,7 +36,6 @@ export function AdminPage() {
 
   const [newToken, setNewToken] = useState('');
 
-  // --- NOVO ESTADO DE ARQUIVOS COM PREVIEW ---
   const [selectedFiles, setSelectedFiles] = useState<
     { file: File; preview: string }[]
   >([]);
@@ -73,6 +72,11 @@ export function AdminPage() {
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewToken(e.target.value.toUpperCase());
   };
+  // Controle de progresso do upload
+  const [uploadProgress, setUploadProgress] = useState({
+    current: 0,
+    total: 0,
+  });
 
   const setError = (msg: string | null) => {
     if (msg) setStatus({ type: 'error', msg });
@@ -89,27 +93,20 @@ export function AdminPage() {
     }
   };
 
-  // --- FUNÇÕES DE SELEÇÃO E REMOÇÃO DE ARQUIVOS (NOVAS) ---
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files).map(file => ({
         file,
-        preview: URL.createObjectURL(file), // Gera a miniatura temporária
+        preview: URL.createObjectURL(file), // Gera a miniatura provisória
       }));
-
-      // Adiciona as novas fotos mantendo as que já estavam lá
       setSelectedFiles(prev => [...prev, ...newFiles]);
-
-      // Limpa o input para permitir selecionar a mesma foto novamente se quiser
       e.target.value = '';
     }
   };
-
   const removeFile = (indexToRemove: number) => {
     setSelectedFiles(prev => {
       const newArray = [...prev];
-      // Limpa a memória da imagem excluída
-      URL.revokeObjectURL(newArray[indexToRemove].preview);
+      URL.revokeObjectURL(newArray[indexToRemove].preview); // Libera a memória
       newArray.splice(indexToRemove, 1);
       return newArray;
     });
@@ -247,9 +244,14 @@ export function AdminPage() {
     if (selectedFiles.length === 0) return;
     setLoading(true);
     setConfirmModal(null);
+    setUploadProgress({ current: 0, total: selectedFiles.length });
+
     try {
       const uploadedPhotos = [];
+
       for (let i = 0; i < selectedFiles.length; i++) {
+        setUploadProgress({ current: i + 1, total: selectedFiles.length });
+
         const file = selectedFiles[i].file;
         const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const timestamp = Date.now();
@@ -258,6 +260,7 @@ export function AdminPage() {
           maxWidthOrHeight: 1080,
           useWebWorker: true,
         };
+
         const compressedFile = await imageCompression(file, compressionOptions);
         const watermarkedBlob = await applyWatermark(compressedFile);
         const watermarkedFile = new File(
@@ -265,14 +268,16 @@ export function AdminPage() {
           `wm_${safeFileName}`,
           { type: 'image/jpeg' }
         );
+
         const fileNameOriginal = `${folderName}/original_${timestamp}_${i}_${safeFileName}`;
         const fileNamePublic = `${folderName}/display_${timestamp}_${i}.jpg`;
 
-        await supabase.storage.from('photos').upload(fileNameOriginal, file);
-        const { error: uploadError } = await supabase.storage
-          .from('photos')
-          .upload(fileNamePublic, watermarkedFile);
-        if (uploadError) throw uploadError;
+        await Promise.all([
+          supabase.storage.from('photos').upload(fileNameOriginal, file),
+          supabase.storage
+            .from('photos')
+            .upload(fileNamePublic, watermarkedFile),
+        ]);
 
         const {
           data: { publicUrl: thumbUrl },
@@ -295,6 +300,7 @@ export function AdminPage() {
       const { error: photosError } = await supabase
         .from('photos')
         .insert(uploadedPhotos);
+
       if (photosError) throw photosError;
 
       setStatus({
@@ -305,7 +311,7 @@ export function AdminPage() {
       });
       setNewToken('');
 
-      // Limpa os arquivos da memória e da tela após sucesso
+      // Limpa os arquivos da memória
       selectedFiles.forEach(f => URL.revokeObjectURL(f.preview));
       setSelectedFiles([]);
       setDescription('');
@@ -317,6 +323,7 @@ export function AdminPage() {
       });
     } finally {
       setLoading(false);
+      setUploadProgress({ current: 0, total: 0 }); // Zera o contador
     }
   };
 
@@ -338,6 +345,7 @@ export function AdminPage() {
 
         if (searchError) throw searchError;
 
+        // SE O ÁLBUM EXISTE, MOSTRA O MODAL E PARA O UPLOAD
         if (existingCard) {
           setLoading(false);
           setConfirmModal({ show: true, token, cardId: existingCard.id });
@@ -878,6 +886,7 @@ export function AdminPage() {
               </div>
             )}
 
+            {/* SECÇÃO 2: SELEÇÃO DE FOTOS E GRID DE MINIATURAS */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {uploadMode === 'private'
@@ -885,7 +894,7 @@ export function AdminPage() {
                   : '1. Selecione as Fotos'}
               </label>
 
-              {/* ÁREA DE CLICK E ARRASTAR */}
+              {/* ÁREA DE CLICK E ARRASTAR (CAIXA TRACEJADA) */}
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer relative">
                 <input
                   type="file"
@@ -909,7 +918,7 @@ export function AdminPage() {
                 </div>
               </div>
 
-              {/* GRID DE MINIATURAS (PREVIEW) */}
+              {/* >>> O GRID DE MINIATURAS ENTRA AQUI! <<< */}
               {selectedFiles.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 animate-in fade-in zoom-in-95 duration-200">
                   {selectedFiles.map((item, idx) => (
@@ -983,8 +992,10 @@ export function AdminPage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" /> Processando
-                  Imagens...
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {uploadProgress.total > 0
+                    ? `Enviando foto ${uploadProgress.current} de ${uploadProgress.total}...`
+                    : 'Processando Imagens...'}
                 </>
               ) : (
                 <>
