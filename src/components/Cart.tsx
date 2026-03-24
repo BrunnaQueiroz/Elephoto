@@ -145,9 +145,10 @@ export function Cart({ isOpen, onClose }: CartProps) {
     try {
       const cartWithDiscount = cart.map((photo, index) => {
         const posicao = index + 1;
-        const precoBase = 4.99;
-        const precoExibicao =
-          posicao >= 7 ? 1.99 : precoBase * Math.pow(0.84, index);
+
+        // NOVA REGRA DE PREÇO AQUI:
+        const fixedPrices = [4.99, 4.19, 3.69, 3.1, 2.7, 2.19];
+        const precoExibicao = index < 6 ? fixedPrices[index] : 1.99;
 
         return {
           ...photo,
@@ -239,9 +240,10 @@ export function Cart({ isOpen, onClose }: CartProps) {
             <div className="space-y-4 mb-8">
               {cart.map((photo, index) => {
                 const posicao = index + 1;
-                const precoBase = 4.99;
-                const precoExibicao =
-                  posicao >= 6 ? 1.99 : precoBase * Math.pow(0.8, index);
+
+                // NOVA REGRA DE PREÇO AQUI TAMBÉM:
+                const fixedPrices = [4.99, 4.19, 3.69, 3.1, 2.7, 2.19];
+                const precoExibicao = index < 6 ? fixedPrices[index] : 1.99;
 
                 return (
                   <div
