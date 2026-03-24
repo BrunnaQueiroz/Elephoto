@@ -85,11 +85,18 @@ export function AdminPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'admin' && password === 'Eleph@to2026') {
+
+    const typedLogin = email.trim();
+
+    // Verifica se é o admin master OU o novo acesso do Lambert
+    if (
+      (typedLogin === 'admin' && password === 'Eleph@to2026') ||
+      (typedLogin === "J.D'Allambert" && password === 'moises')
+    ) {
       setIsAuthenticated(true);
       setError(null);
     } else {
-      setError('Credenciais inválidas. ');
+      setError('Credenciais inválidas.');
     }
   };
 
