@@ -30,8 +30,11 @@ export function AdminPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  // const [uploadMode, setUploadMode] = useState<
+  //   'selection' | 'private' | 'public' | 'manage'
+  // >('selection');
   const [uploadMode, setUploadMode] = useState<
-    'selection' | 'private' | 'public' | 'manage'
+    'selection' | 'private' | 'public' | 'manage' | 'clients'
   >('selection');
 
   const [newToken, setNewToken] = useState('');
@@ -380,6 +383,84 @@ export function AdminPage() {
     }
   };
 
+  // --- ESTADOS E FUNÇÕES DE GERENCIAR CLIENTES ---
+
+  const [clientsList, setClientsList] = useState<any[]>([]);
+
+  const loadClients = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setClientsList(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar clientes:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteClient = async (cardId: string, cardCode: string) => {
+    const pass = window.prompt(
+      `ALERTA: Isso apagará o cliente ${cardCode} e TODAS as suas fotos do banco e do storage.\n\nDigite a senha de autorização:`
+    );
+
+    // Aceita tanto a senha master quanto a do Lambert
+    if (pass !== '1502' && pass !== 'moises') {
+      if (pass !== null) alert('Senha incorreta. Exclusão cancelada.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. Busca as fotos para poder apagar os arquivos físicos no Storage
+      const { data: photos } = await supabase
+        .from('photos')
+        .select('filename, thumbnail_url')
+        .eq('card_id', cardId);
+
+      // 2. Apaga as fotos da tabela (para não dar erro de chave estrangeira)
+      await supabase.from('photos').delete().eq('card_id', cardId);
+
+      // 3. Apaga o álbum (card) da tabela
+      const { error: cardError } = await supabase
+        .from('cards')
+        .delete()
+        .eq('id', cardId);
+      if (cardError) throw cardError;
+
+      // 4. Apaga os arquivos físicos no Storage para liberar espaço
+      if (photos && photos.length > 0) {
+        const filesToRemove: string[] = [];
+        photos.forEach(p => {
+          if (p.filename) filesToRemove.push(p.filename);
+          if (p.thumbnail_url) {
+            const urlParts = p.thumbnail_url.split('/photos/');
+            if (urlParts.length > 1) filesToRemove.push(urlParts[1]);
+          }
+        });
+        if (filesToRemove.length > 0) {
+          await supabase.storage.from('photos').remove(filesToRemove);
+        }
+      }
+
+      // 5. Atualiza a tela
+      setClientsList(prev => prev.filter(c => c.id !== cardId));
+      setToast({ show: true, msg: `Cliente ${cardCode} excluído!` });
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000);
+    } catch (err) {
+      console.error('Erro ao excluir cliente:', err);
+      alert(
+        'Erro ao excluir. Verifique se o Supabase tem permissão de DELETE na tabela cards.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- TELA 1: LOGIN ---
   if (!isAuthenticated) {
     return (
@@ -540,6 +621,29 @@ export function AdminPage() {
               </div>
               <div className="mt-auto pt-4 flex items-center text-purple-600 font-semibold text-sm">
                 <Save className="w-5 h-5 mr-2" /> Editar Descrições
+              </div>
+            </button>
+            {/* NOVO BOTÃO: GERENCIAR CLIENTES */}
+            <button
+              onClick={() => {
+                setUploadMode('clients');
+                loadClients();
+              }}
+              className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
+            >
+              <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl group-hover:scale-110 transition-transform">
+                <LayoutList className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Gerenciar Clientes
+                </h2>
+                <p className="text-gray-500 leading-relaxed text-sm">
+                  Visualize todos os álbuns criados e exclua clientes antigos.
+                </p>
+              </div>
+              <div className="mt-auto pt-4 flex items-center text-orange-600 font-semibold text-sm">
+                <Trash2 className="w-5 h-5 mr-2" /> Limpar Base de Clientes
               </div>
             </button>
           </div>
@@ -789,6 +893,92 @@ export function AdminPage() {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+  // --- NOVA TELA: GERENCIAR CLIENTES ---
+  if (uploadMode === 'clients') {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setUploadMode('selection')}
+              className="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-full hover:bg-gray-100"
+              title="Voltar"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <span className="font-semibold text-gray-900">
+              Base de Clientes
+            </span>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto p-6 mt-6">
+          {toast.show && (
+            <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <span className="font-medium">{toast.msg}</span>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <Loader2 className="w-10 h-10 animate-spin text-orange-600 mb-4" />
+              <p>Carregando clientes...</p>
+            </div>
+          ) : clientsList.length === 0 ? (
+            <div className="text-center py-20 text-gray-500">
+              <p className="text-lg">Nenhum cliente cadastrado ainda.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase">
+                      Código do Álbum
+                    </th>
+                    <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase">
+                      Data de Criação
+                    </th>
+                    <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase text-right">
+                      Ação
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {clientsList.map(client => (
+                    <tr
+                      key={client.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-6 py-4 font-mono font-bold text-gray-900">
+                        {client.code}
+                      </td>
+                      <td className="px-6 py-4 text-gray-500">
+                        {new Date(client.created_at).toLocaleDateString(
+                          'pt-BR'
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() =>
+                            handleDeleteClient(client.id, client.code)
+                          }
+                          className="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ml-auto"
+                        >
+                          <Trash2 className="w-4 h-4" /> Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </main>
       </div>
     );
   }
