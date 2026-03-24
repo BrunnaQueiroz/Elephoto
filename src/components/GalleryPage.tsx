@@ -23,16 +23,15 @@ export function GalleryPage() {
     clearCart,
     cartTotal,
   } = useApp();
+
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [albumCode, setAlbumCode] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Controla qual foto está aberta no modal
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-
-  // --- ESTADOS DA VITRINE "VOCÊ TAMBÉM PODE GOSTAR" ---
   const [publicPhotos, setPublicPhotos] = useState<Photo[]>([]);
 
   useEffect(() => {
@@ -67,7 +66,6 @@ export function GalleryPage() {
         return;
       }
 
-      // 1. Busca as fotos privadas do cliente
       const { data: photosData, error: photosError } = await supabase
         .from('photos')
         .select('*')
@@ -76,14 +74,12 @@ export function GalleryPage() {
       if (photosError) throw photosError;
       setPhotos(photosData || []);
 
-      // 2. Busca as fotos recomendadas (upsells) cruzando com a tabela photos
       const { data: upsellsData, error: upsellsError } = await supabase
         .from('card_upsells')
         .select('photos(*)')
         .eq('card_id', cardData.id);
 
       if (!upsellsError && upsellsData) {
-        // Extrai as fotos de dentro do objeto retornado pelo Supabase e limpa os nulos
         const recommendedPhotos = upsellsData
           .map(item =>
             Array.isArray(item.photos) ? item.photos[0] : item.photos
@@ -141,10 +137,25 @@ export function GalleryPage() {
     );
   };
 
+  // --- LÓGICA DE LOGOUT COM MODAL BONITO ---
+  const handleLogoutClick = () => {
+    if (cart.length > 0) {
+      setShowLogoutModal(true);
+    } else {
+      executeLogout();
+    }
+  };
+
+  const executeLogout = () => {
+    clearCart();
+    localStorage.removeItem('elephoto_code');
+    setCurrentView('home');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white text-gray-500 gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-gray-900" />
+        <Loader2 className="w-10 h-10 animate-spin text-purple-600" />
         <p>Buscando suas fotos...</p>
       </div>
     );
@@ -170,26 +181,13 @@ export function GalleryPage() {
     );
   }
 
-  const handleLogout = () => {
-    if (cart.length > 0) {
-      const confirmLeave = window.confirm(
-        'Se você sair agora, seu carrinho será esvaziado. Deseja mesmo sair?'
-      );
-      if (!confirmLeave) return;
-    }
-    clearCart();
-    localStorage.removeItem('elephoto_code');
-    setCurrentView('home');
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* HEADER DA GALERIA */}
       {/* HEADER DA GALERIA */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 py-4 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -203,7 +201,7 @@ export function GalleryPage() {
             </p>
           </div>
 
-          {/* NOVA ÁREA DO CARRINHO COM SUBTOTAL */}
+          {/* ÁREA DO CARRINHO COM SUBTOTAL */}
           <div className="flex items-center gap-3">
             {cart.length > 0 && (
               <div className="text-right hidden sm:block animate-in fade-in slide-in-from-right-4 duration-300">
@@ -219,9 +217,9 @@ export function GalleryPage() {
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 hover:bg-gray-100 rounded-full transition-colors group flex items-center"
             >
-              <ShoppingCart className="w-6 h-6 text-gray-700 group-hover:text-gray-900" />
+              <ShoppingCart className="w-6 h-6 text-gray-700 group-hover:text-purple-600" />
               {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-white">
+                <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-white">
                   {cart.length}
                 </span>
               )}
@@ -299,7 +297,7 @@ export function GalleryPage() {
         {availableUpsells.length > 0 && (
           <div className="mt-16 pt-10 border-t border-gray-200 animate-in fade-in duration-700">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-wide">
-              <Sparkles className="w-6 h-6 text-pink-500" /> Você também pode
+              <Sparkles className="w-6 h-6 text-purple-600" /> Você também pode
               gostar
             </h2>
 
@@ -333,7 +331,7 @@ export function GalleryPage() {
                   <div className="p-3 sm:p-4 mt-auto">
                     <button
                       onClick={() => addToCart(photo)}
-                      className="w-full py-3 bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl hover:bg-pink-500 hover:text-white hover:border-pink-500 transition-colors flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                      className="w-full py-3 bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-colors flex items-center justify-center gap-2 active:scale-95 shadow-sm"
                     >
                       <Plus className="w-4 h-4" /> Adicionar
                     </button>
@@ -344,7 +342,7 @@ export function GalleryPage() {
 
             {/* AVISO DE USO NÃO COMERCIAL DA VITRINE */}
             <div className="max-w-4xl mx-auto mt-12 mb-8 px-6">
-              <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
+              <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -356,7 +354,7 @@ export function GalleryPage() {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-amber-600"
+                    className="text-orange-400"
                   >
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" x2="12" y1="8" y2="12" />
@@ -469,6 +467,38 @@ export function GalleryPage() {
       </div>
 
       <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+
+      {/* MODAL DE CONFIRMAÇÃO DE SAÍDA (CARRINHO CHEIO) */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+              <ShoppingCart className="w-8 h-8 text-blue-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Esvaziar carrinho?
+            </h2>
+            <p className="text-gray-600 mb-8 leading-relaxed text-sm">
+              Se você sair do álbum agora, as fotos que você selecionou serão
+              removidas do carrinho. Deseja mesmo sair?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-colors"
+              >
+                Continuar Vendo
+              </button>
+              <button
+                onClick={executeLogout}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-colors"
+              >
+                Sim, sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
