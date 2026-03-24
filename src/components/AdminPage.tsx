@@ -66,7 +66,8 @@ export function AdminPage() {
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-
+  const [publicAlbums, setPublicAlbums] = useState<any[]>([]);
+  const [newAlbumName, setNewAlbumName] = useState('');
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
     token: string;
@@ -538,6 +539,47 @@ export function AdminPage() {
       setLoading(false);
     }
   };
+  const loadPublicAlbums = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('public_albums')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPublicAlbums(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar álbuns:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAlbum = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAlbumName.trim()) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('public_albums')
+        .insert([{ name: newAlbumName.trim() }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPublicAlbums(prev => [data, ...prev]);
+      setNewAlbumName('');
+      setToast({ show: true, msg: `Álbum "${data.name}" criado!` });
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000);
+    } catch (err) {
+      console.error('Erro ao criar álbum:', err);
+      alert('Erro ao criar álbum. Verifique as permissões no Supabase.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --- TELA 1: LOGIN OU CADASTRO ---
   if (!isAuthenticated) {
@@ -767,6 +809,29 @@ export function AdminPage() {
               </div>
               <div className="mt-auto pt-4 flex items-center text-orange-600 font-semibold text-sm">
                 <Trash2 className="w-5 h-5 mr-2" /> Limpar Base de Clientes
+              </div>
+            </button>
+            {/* NOVO BOTÃO: ORGANIZAR ÁLBUNS PÚBLICOS */}
+            <button
+              onClick={() => {
+                setUploadMode('manage_albums' as any); // Usamos o cast para evitar erro de tipo agora
+                loadPublicAlbums();
+              }}
+              className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
+            >
+              <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 transition-transform">
+                <ImageIcon className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Organizar Álbuns
+                </h2>
+                <p className="text-gray-500 leading-relaxed text-sm">
+                  Crie pastas como "Praia da Barra" e gerencie fotos por local.
+                </p>
+              </div>
+              <div className="mt-auto pt-4 flex items-center text-purple-600 font-semibold text-sm">
+                <Plus className="w-5 h-5 mr-2" /> Criar Novo Álbum
               </div>
             </button>
           </div>
@@ -1016,6 +1081,81 @@ export function AdminPage() {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+  // --- TELA: GERENCIAR ÁLBUNS PÚBLICOS ---
+  if ((uploadMode as string) === 'manage_albums') {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setUploadMode('selection')}
+              className="text-gray-500 hover:text-gray-900 transition-colors p-2 rounded-full hover:bg-gray-100"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <span className="font-semibold text-gray-900">
+              Organizar Álbuns Públicos
+            </span>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto p-6 mt-6">
+          {/* Formulário de Criação */}
+          <form
+            onSubmit={handleCreateAlbum}
+            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-8 flex gap-4"
+          >
+            <input
+              type="text"
+              placeholder="Ex: Praia da Barra - 2026"
+              value={newAlbumName}
+              onChange={e => setNewAlbumName(e.target.value)}
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+            />
+            <button
+              type="submit"
+              disabled={loading || !newAlbumName}
+              className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-700 transition-all flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" /> Criar Álbum
+            </button>
+          </form>
+
+          {/* Lista de Álbuns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {publicAlbums.map(album => (
+              <div
+                key={album.id}
+                className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between group hover:border-purple-300 transition-all"
+              >
+                <div>
+                  <h3 className="font-bold text-gray-900">{album.name}</h3>
+                  <p className="text-xs text-gray-400">
+                    Criado em{' '}
+                    {new Date(album.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Adicionar/Ver fotos"
+                    onClick={() =>
+                      alert('Próximo passo: Tela de fotos deste álbum!')
+                    }
+                  >
+                    <ImagePlus className="w-5 h-5" />
+                  </button>
+                  <button className="p-2 text-red-400 hover:text-red-600 rounded-lg">
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
