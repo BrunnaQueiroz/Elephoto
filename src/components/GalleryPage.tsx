@@ -15,8 +15,14 @@ import {
 import { Cart } from './Cart';
 
 export function GalleryPage() {
-  const { setCurrentView, addToCart, cart, removeFromCart, clearCart } =
-    useApp();
+  const {
+    setCurrentView,
+    addToCart,
+    cart,
+    removeFromCart,
+    clearCart,
+    cartTotal,
+  } = useApp();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,6 +185,7 @@ export function GalleryPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* HEADER DA GALERIA */}
+      {/* HEADER DA GALERIA */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 px-4 py-4 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button
@@ -196,17 +203,30 @@ export function GalleryPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative p-2 hover:bg-gray-100 rounded-full transition-colors group"
-          >
-            <ShoppingCart className="w-6 h-6 text-gray-700 group-hover:text-gray-900" />
+          {/* NOVA ÁREA DO CARRINHO COM SUBTOTAL */}
+          <div className="flex items-center gap-3">
             {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-white">
-                {cart.length}
-              </span>
+              <div className="text-right hidden sm:block animate-in fade-in slide-in-from-right-4 duration-300">
+                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider leading-none mb-1">
+                  Subtotal
+                </p>
+                <p className="text-sm font-black text-gray-900 leading-none">
+                  R$ {cartTotal.toFixed(2)}
+                </p>
+              </div>
             )}
-          </button>
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 hover:bg-gray-100 rounded-full transition-colors group flex items-center"
+            >
+              <ShoppingCart className="w-6 h-6 text-gray-700 group-hover:text-gray-900" />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-gray-900 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold border-2 border-white">
+                  {cart.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
