@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-
 import { ArrowLeft, Loader2, Trash2, CheckCircle, Star } from 'lucide-react';
 
 interface ClientManagerProps {
   onBack: () => void;
-  onUpsell: (client: any) => void; // <--- Adicione esta linha
+  onUpsell: (client: any) => void;
 }
 
 export function ClientManager({ onBack, onUpsell }: ClientManagerProps) {
@@ -82,7 +81,7 @@ export function ClientManager({ onBack, onUpsell }: ClientManagerProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
@@ -94,7 +93,7 @@ export function ClientManager({ onBack, onUpsell }: ClientManagerProps) {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto p-6 mt-6">
+      <main className="max-w-4xl mx-auto p-4 sm:p-6 mt-2 sm:mt-6">
         {toast.show && (
           <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50">
             <CheckCircle className="w-5 h-5 text-green-400" />
@@ -112,17 +111,17 @@ export function ClientManager({ onBack, onUpsell }: ClientManagerProps) {
             <p className="text-lg">Nenhum cliente cadastrado ainda.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table className="w-full text-left">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+            <table className="w-full text-left whitespace-nowrap">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase">
+                  <th className="px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-gray-500 uppercase">
                     Código do Álbum
                   </th>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase">
+                  <th className="px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-gray-500 uppercase">
                     Data de Criação
                   </th>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase text-right">
+                  <th className="px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-gray-500 uppercase text-right">
                     Ação
                   </th>
                 </tr>
@@ -133,38 +132,30 @@ export function ClientManager({ onBack, onUpsell }: ClientManagerProps) {
                     key={client.id}
                     className="hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-6 py-4 font-mono font-bold text-gray-900">
+                    <td className="px-4 sm:px-6 py-4 font-mono font-bold text-gray-900 text-sm sm:text-base">
                       {client.code}
                     </td>
-                    <td className="px-6 py-4 text-gray-500">
+                    <td className="px-4 sm:px-6 py-4 text-gray-500 text-sm sm:text-base">
                       {new Date(client.created_at).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => onUpsell(client)}
-                        className="text-purple-600 hover:text-white border border-purple-600 hover:bg-purple-600 font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <Star className="w-4 h-4" /> Recomendar Fotos
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleDeleteClient(client.id, client.code)
-                        }
-                        className="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" /> Excluir
-                      </button>
+                    <td className="px-4 sm:px-6 py-4">
+                      <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
+                        <button
+                          onClick={() => onUpsell(client)}
+                          className="w-full sm:w-auto text-purple-600 hover:text-white border border-purple-600 hover:bg-purple-600 font-medium px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                        >
+                          <Star className="w-4 h-4" /> Recomendar
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDeleteClient(client.id, client.code)
+                          }
+                          className="w-full sm:w-auto text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-medium px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                        >
+                          <Trash2 className="w-4 h-4" /> Excluir
+                        </button>
+                      </div>
                     </td>
-                    {/* <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() =>
-                          handleDeleteClient(client.id, client.code)
-                        }
-                        className="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ml-auto"
-                      >
-                        <Trash2 className="w-4 h-4" /> Excluir
-                      </button>
-                    </td> */}
                   </tr>
                 ))}
               </tbody>
