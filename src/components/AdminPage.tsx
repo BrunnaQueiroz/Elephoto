@@ -65,6 +65,7 @@ export function AdminPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
@@ -86,20 +87,78 @@ export function AdminPage() {
     else setStatus(null);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  // --- FUNÇÃO DE LOGIN (AGORA BUSCA NO BANCO) ---
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const typedLogin = email.trim();
 
-    // Verifica se é o admin master OU o novo acesso do Lambert
-    if (
-      (typedLogin === 'admin' && password === 'Eleph@to2026') ||
-      (typedLogin === "J.D'Allambert" && password === 'moises')
-    ) {
+    // Mantém o acesso do Admin Master como segurança (caso dê algo errado no banco)
+    if (typedLogin === 'admin' && password === 'Eleph@to2026') {
       setIsAuthenticated(true);
       setError(null);
-    } else {
-      setError('Credenciais inválidas.');
+      return;
+    }
+
+    try {
+      // Vai no Supabase e procura um usuário e senha idênticos ao digitado
+      const { data, error } = await supabase
+        .from('photographers')
+        .select('id')
+        .eq('username', typedLogin)
+        .eq('password', password)
+        .maybeSingle();
+
+      if (error || !data) {
+        setError('Credenciais inválidas.');
+      } else {
+        setIsAuthenticated(true);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Erro no login:', err);
+      setError('Erro de conexão ao tentar fazer login.');
+    }
+  };
+
+  // --- NOVA FUNÇÃO DE CADASTRO ---
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const typedLogin = email.trim();
+
+    if (!typedLogin || !password) {
+      setError('Preencha um nome de usuário e uma senha.');
+      return;
+    }
+
+    try {
+      // Tenta inserir o novo fotógrafo no Supabase
+      const { error: insertError } = await supabase
+        .from('photographers')
+        .insert([{ username: typedLogin, password: password }]);
+
+      if (insertError) {
+        // código 23505 = regra "Is Unique"
+        if (
+          insertError.code === '23505' ||
+          insertError.message.includes('unique')
+        ) {
+          setError('Este nome de usuário já está em uso. Escolha outro.');
+          return;
+        }
+        throw insertError;
+      }
+
+      // Se deu tudo certo:
+      setIsRegistering(false);
+      setPassword('');
+      setStatus({
+        type: 'success',
+        msg: 'Cadastro realizado com sucesso! Faça seu login abaixo.',
+      });
+    } catch (err) {
+      console.error('Erro no cadastro:', err);
+      setError('Erro ao cadastrar. Tente novamente.');
     }
   };
 
@@ -480,18 +539,23 @@ export function AdminPage() {
     }
   };
 
-  // --- TELA 1: LOGIN ---
+  // --- TELA 1: LOGIN OU CADASTRO ---
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-light text-gray-900">
-              Área do Fotógrafo
+              {isRegistering ? 'Novo Fotógrafo' : 'Área do Fotógrafo'}
             </h2>
-            <p className="text-sm text-gray-500 mt-2">Acesso restrito</p>
+            <p className="text-sm text-gray-500 mt-2">
+              {isRegistering ? 'Junte-se ao Elephoto' : 'Acesso restrito'}
+            </p>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form
+            onSubmit={isRegistering ? handleRegister : handleLogin}
+            className="space-y-4"
+          >
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Login
@@ -500,7 +564,8 @@ export function AdminPage() {
                 type="text"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                placeholder={isRegistering ? 'Escolha um nome de usuário' : ''}
               />
             </div>
             <div>
@@ -512,12 +577,13 @@ export function AdminPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none pr-12"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none pr-12 transition-all"
+                  placeholder={isRegistering ? 'Crie uma senha segura' : ''}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-purple-600 transition-colors"
                   title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? (
@@ -528,21 +594,59 @@ export function AdminPage() {
                 </button>
               </div>
             </div>
-            {status?.type === 'error' && (
-              <p className="text-red-500 text-sm text-center">{status.msg}</p>
+
+            {status && (
+              <div
+                className={`p-4 rounded-lg text-sm text-center font-medium animate-in fade-in slide-in-from-top-2 ${
+                  status.type === 'success'
+                    ? 'bg-purple-50 text-purple-700 border border-purple-200 shadow-sm'
+                    : 'bg-red-50 text-red-600 border border-red-100'
+                }`}
+              >
+                {status.msg}
+              </div>
             )}
+
             <button
               type="submit"
-              className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800 transition-colors"
+              className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-purple-700 transition-colors mt-2 font-medium"
             >
-              Entrar
+              {isRegistering ? 'Cadastrar' : 'Entrar'}
             </button>
+
+            {/* O NOVO LINK DE ALTERNAR TELAS */}
+            <div className="text-center mt-6 pt-4 border-t border-gray-100">
+              {isRegistering ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegistering(false);
+                    setError(null);
+                  }}
+                  className="text-sm text-blue-600 hover:text-purple-700 hover:underline transition-colors"
+                >
+                  Já tem uma conta? Entre aqui
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegistering(true);
+                    setError(null);
+                  }}
+                  className="text-sm text-blue-600 hover:text-purple-700 hover:underline transition-colors"
+                >
+                  Ainda não é um Elephotografo? Cadastre-se
+                </button>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={() => setCurrentView('home')}
-              className="w-full text-gray-500 text-sm hover:text-gray-700 mt-2"
+              className="w-full text-gray-400 text-xs hover:text-gray-600 mt-4 transition-colors"
             >
-              Voltar para Home
+              Voltar para a página inicial
             </button>
           </form>
         </div>
@@ -1181,12 +1285,13 @@ export function AdminPage() {
               </div>
             )}
 
+            {/* ERRO OU SUCESSO */}
             {status && (
               <div
-                className={`p-4 rounded-lg text-sm ${
+                className={`p-4 rounded-lg text-sm text-center font-medium animate-in fade-in slide-in-from-top-2 ${
                   status.type === 'success'
-                    ? 'bg-green-50 text-green-700'
-                    : 'bg-red-50 text-red-700'
+                    ? 'bg-purple-50 text-purple-700 border border-purple-200 shadow-sm'
+                    : 'bg-red-50 text-red-600 border border-red-100'
                 }`}
               >
                 {status.msg}
