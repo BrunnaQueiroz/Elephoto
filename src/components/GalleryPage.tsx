@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase, Photo } from '../lib/supabase';
 import {
@@ -10,8 +10,6 @@ import {
   X,
   Maximize2,
   Sparkles,
-  ChevronLeft,
-  ChevronRight,
   Printer,
 } from 'lucide-react';
 import { Cart } from './Cart';
@@ -28,13 +26,8 @@ export function GalleryPage() {
   // Controla qual foto está aberta no modal
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
-  // --- ESTADOS E REFS DA VITRINE "VOCÊ TAMBÉM PODE GOSTAR" ---
+  // --- ESTADOS DA VITRINE "VOCÊ TAMBÉM PODE GOSTAR" ---
   const [publicPhotos, setPublicPhotos] = useState<Photo[]>([]);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isCarouselPaused, setIsCarouselPaused] = useState(false);
-  const startX = useRef(0);
-  const scrollLeftStart = useRef(0);
-  const isDragging = useRef(false);
 
   useEffect(() => {
     fetchPhotos();
@@ -103,62 +96,6 @@ export function GalleryPage() {
   const availableUpsells = publicPhotos.filter(
     publicPhoto => !cart.some(cartItem => cartItem.id === publicPhoto.id)
   );
-
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer || isCarouselPaused || availableUpsells.length === 0)
-      return;
-
-    let scrollAmount = scrollContainer.scrollLeft;
-    const scrollSpeed = 0.5;
-    let animationId: number;
-
-    const scroll = () => {
-      if (!scrollContainer) return;
-      scrollAmount += scrollSpeed;
-
-      if (
-        scrollAmount >=
-        scrollContainer.scrollWidth - scrollContainer.clientWidth
-      ) {
-        scrollAmount = 0;
-      }
-
-      scrollContainer.scrollLeft = scrollAmount;
-      animationId = requestAnimationFrame(scroll);
-    };
-
-    animationId = requestAnimationFrame(scroll);
-    return () => cancelAnimationFrame(animationId);
-  }, [isCarouselPaused, availableUpsells.length]);
-
-  const scrollByAmount = (amount: number) => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: amount, behavior: 'smooth' });
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    setIsCarouselPaused(true);
-    isDragging.current = true;
-    startX.current = e.pageX - scrollContainerRef.current!.offsetLeft;
-    scrollLeftStart.current = scrollContainerRef.current!.scrollLeft;
-    e.preventDefault();
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (startX.current - x) * 1.5;
-    scrollContainerRef.current.scrollLeft = scrollLeftStart.current + walk;
-  };
-
-  const handleMouseUpOrLeave = () => {
-    isDragging.current = false;
-    setIsCarouselPaused(false);
-  };
 
   const isInCart = (photoId: string) => cart.some(p => p.id === photoId);
 
@@ -338,51 +275,33 @@ export function GalleryPage() {
           </div>
         )}
 
-        {/* CARROSSEL "VOCÊ TAMBÉM PODE GOSTAR" */}
+        {/* NOVA VITRINE EM GRID "VOCÊ TAMBÉM PODE GOSTAR" */}
         {availableUpsells.length > 0 && (
-          <div className="mt-16 pt-10 border-t border-gray-200 relative group animate-in fade-in duration-700">
+          <div className="mt-16 pt-10 border-t border-gray-200 animate-in fade-in duration-700">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-wide">
               <Sparkles className="w-6 h-6 text-pink-500" /> Você também pode
               gostar
             </h2>
 
-            <button
-              onClick={() => scrollByAmount(-200)}
-              onMouseEnter={() => setIsCarouselPaused(true)}
-              onMouseLeave={() => setIsCarouselPaused(false)}
-              className="hidden md:flex absolute left-[-20px] top-[60%] z-10 items-center justify-center w-12 h-12 bg-white border border-gray-100 rounded-full shadow-lg text-pink-500 hover:bg-pink-50 transition-all opacity-0 group-hover:opacity-100"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-
-            <div
-              ref={scrollContainerRef}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUpOrLeave}
-              onMouseLeave={handleMouseUpOrLeave}
-              onTouchStart={() => setIsCarouselPaused(true)}
-              onTouchEnd={() => setIsCarouselPaused(false)}
-              className="flex gap-4 md:gap-6 overflow-x-auto pb-6 cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
+            {/* O Grid com as mesmas colunas das fotos privadas */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {availableUpsells.map(photo => (
                 <div
                   key={photo.id}
-                  className="min-w-[160px] max-w-[160px] md:min-w-[200px] md:max-w-[200px] flex-shrink-0 flex flex-col gap-3 group/item select-none"
+                  className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col border border-gray-100"
                 >
                   <div
-                    className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-200 shadow-sm group-hover/item:shadow-md transition-shadow relative cursor-zoom-in"
+                    className="aspect-square bg-gray-200 relative cursor-zoom-in overflow-hidden"
                     onClick={() => setSelectedPhoto(photo)}
                   >
                     <img
                       src={photo.thumbnail_url}
-                      className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       alt={photo.description || 'Foto Extra'}
                       draggable={false}
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover/item:bg-black/60 transition-colors flex flex-col items-center justify-center opacity-0 group-hover/item:opacity-100 p-4 text-center">
-                      <Maximize2 className="text-white w-6 h-6 drop-shadow-lg mb-2" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 p-4 text-center">
+                      <Maximize2 className="text-white w-8 h-8 drop-shadow-lg mb-2" />
                       {photo.description && (
                         <p className="text-white text-xs font-medium drop-shadow-md line-clamp-3">
                           {photo.description}
@@ -391,24 +310,17 @@ export function GalleryPage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => addToCart(photo)}
-                    className="w-full py-3 bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl hover:bg-pink-500 hover:text-white hover:border-pink-500 transition-colors flex items-center justify-center gap-2 active:scale-95 shadow-sm"
-                  >
-                    <Plus className="w-4 h-4" /> Adicionar
-                  </button>
+                  <div className="p-3 sm:p-4 mt-auto">
+                    <button
+                      onClick={() => addToCart(photo)}
+                      className="w-full py-3 bg-white border border-gray-200 text-gray-900 text-sm font-bold rounded-xl hover:bg-pink-500 hover:text-white hover:border-pink-500 transition-colors flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" /> Adicionar
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
-
-            <button
-              onClick={() => scrollByAmount(200)}
-              onMouseEnter={() => setIsCarouselPaused(true)}
-              onMouseLeave={() => setIsCarouselPaused(false)}
-              className="hidden md:flex absolute right-[-20px] top-[60%] z-10 items-center justify-center w-12 h-12 bg-white border border-gray-100 rounded-full shadow-lg text-pink-500 hover:bg-pink-50 transition-all opacity-0 group-hover:opacity-100"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
 
             {/* AVISO DE USO NÃO COMERCIAL DA VITRINE */}
             <div className="max-w-4xl mx-auto mt-12 mb-8 px-6">
