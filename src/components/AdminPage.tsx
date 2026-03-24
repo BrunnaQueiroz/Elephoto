@@ -1,24 +1,21 @@
 import { useState } from 'react';
-import imageCompression from 'browser-image-compression';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
+import { usePhotoUpload } from '../hooks/usePhotoUpload';
+import { AdminLogin } from './admin/AdminLogin';
+import { AdminDashboard } from './admin/AdminDashboard';
 import {
   Upload,
   Plus,
   LogOut,
   Image as ImageIcon,
   Loader2,
-  Lock,
-  Globe,
   ImagePlus,
   ArrowLeft,
-  LayoutList,
   Save,
   Pencil,
   CheckCircle,
   AlertCircle,
-  Eye,
-  EyeOff,
   X,
   Trash2,
 } from 'lucide-react';
@@ -26,38 +23,34 @@ import {
 export function AdminPage() {
   const { setCurrentView } = useApp();
 
+  // --- HOOK DE UPLOAD ---
+  const { uploadPhotos, isUploading, uploadProgress } = usePhotoUpload();
+
+  // --- ESTADOS GERAIS ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  // const [uploadMode, setUploadMode] = useState<
-  //   'selection' | 'private' | 'public' | 'manage'
-  // >('selection');
   const [uploadMode, setUploadMode] = useState<
-    'selection' | 'private' | 'public' | 'manage' | 'clients'
+    'selection' | 'private' | 'public' | 'manage' | 'clients' | 'manage_albums'
   >('selection');
 
   const [newToken, setNewToken] = useState('');
-
   const [selectedFiles, setSelectedFiles] = useState<
     { file: File; preview: string }[]
   >([]);
-
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{
     type: 'success' | 'error';
     msg: string;
   } | null>(null);
+  const [toast, setToast] = useState({ show: false, msg: '' });
 
+  // --- ESTADOS DA VITRINE E ÁLBUNS ---
   const [publicGallery, setPublicGallery] = useState<any[]>([]);
   const [descInputs, setDescInputs] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [editingIds, setEditingIds] = useState<Record<string, boolean>>({});
-  const [toast, setToast] = useState({ show: false, msg: '' });
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Estados para o Modal de Exclusão
   const [deleteModal, setDeleteModal] = useState<{
     show: boolean;
     photoId: string | null;
@@ -65,153 +58,53 @@ export function AdminPage() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
+
   const [publicAlbums, setPublicAlbums] = useState<any[]>([]);
   const [newAlbumName, setNewAlbumName] = useState('');
+  const [selectedAlbum, setSelectedAlbum] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [albumPhotos, setAlbumPhotos] = useState<any[]>([]);
+
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
     token: string;
     cardId: string;
   } | null>(null);
+  const [clientsList, setClientsList] = useState<any[]>([]);
 
+  // --- FUNÇÕES AUXILIARES ---
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewToken(e.target.value.toUpperCase());
   };
-  // Controle de progresso do upload
-  const [uploadProgress, setUploadProgress] = useState({
-    current: 0,
-    total: 0,
-  });
 
   const setError = (msg: string | null) => {
     if (msg) setStatus({ type: 'error', msg });
     else setStatus(null);
   };
 
-  // --- FUNÇÃO DE LOGIN (AGORA BUSCA NO BANCO) ---
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const typedLogin = email.trim();
-
-    // Mantém o acesso do Admin Master como segurança (caso dê algo errado no banco)
-    if (typedLogin === 'admin' && password === 'Eleph@to2026') {
-      setIsAuthenticated(true);
-      setError(null);
-      return;
-    }
-
-    try {
-      // Vai no Supabase e procura um usuário e senha idênticos ao digitado
-      const { data, error } = await supabase
-        .from('photographers')
-        .select('id')
-        .eq('username', typedLogin)
-        .eq('password', password)
-        .maybeSingle();
-
-      if (error || !data) {
-        setError('Credenciais inválidas.');
-      } else {
-        setIsAuthenticated(true);
-        setError(null);
-      }
-    } catch (err) {
-      console.error('Erro no login:', err);
-      setError('Erro de conexão ao tentar fazer login.');
-    }
-  };
-
-  // --- NOVA FUNÇÃO DE CADASTRO ---
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const typedLogin = email.trim();
-
-    if (!typedLogin || !password) {
-      setError('Preencha um nome de usuário e uma senha.');
-      return;
-    }
-
-    try {
-      // Tenta inserir o novo fotógrafo no Supabase
-      const { error: insertError } = await supabase
-        .from('photographers')
-        .insert([{ username: typedLogin, password: password }]);
-
-      if (insertError) {
-        // código 23505 = regra "Is Unique"
-        if (
-          insertError.code === '23505' ||
-          insertError.message.includes('unique')
-        ) {
-          setError('Este nome de usuário já está em uso. Escolha outro.');
-          return;
-        }
-        throw insertError;
-      }
-
-      // Se deu tudo certo:
-      setIsRegistering(false);
-      setPassword('');
-      setStatus({
-        type: 'success',
-        msg: 'Cadastro realizado com sucesso! Faça seu login abaixo.',
-      });
-    } catch (err) {
-      console.error('Erro no cadastro:', err);
-      setError('Erro ao cadastrar. Tente novamente.');
-    }
-  };
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files).map(file => ({
         file,
-        preview: URL.createObjectURL(file), // Gera a miniatura provisória
+        preview: URL.createObjectURL(file),
       }));
       setSelectedFiles(prev => [...prev, ...newFiles]);
       e.target.value = '';
     }
   };
+
   const removeFile = (indexToRemove: number) => {
     setSelectedFiles(prev => {
       const newArray = [...prev];
-      URL.revokeObjectURL(newArray[indexToRemove].preview); // Libera a memória
+      URL.revokeObjectURL(newArray[indexToRemove].preview);
       newArray.splice(indexToRemove, 1);
       return newArray;
     });
   };
 
-  const applyWatermark = (file: File | Blob): Promise<Blob> => {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        const fontSize = Math.floor(img.width * 0.15);
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((-45 * Math.PI) / 180);
-        ctx.fillText('ELEPHOTO', 0, 0);
-        canvas.toBlob(
-          blob => {
-            if (blob) resolve(blob);
-          },
-          'image/jpeg',
-          0.85
-        );
-      };
-    });
-  };
-
+  // --- FUNÇÕES DA VITRINE ---
   const loadPublicGallery = async () => {
     setLoading(true);
     try {
@@ -267,9 +160,9 @@ export function AdminPage() {
     setDeleteError('');
 
     try {
-      const photoToDelete = publicGallery.find(
-        p => p.id === deleteModal.photoId
-      );
+      const photoToDelete =
+        publicGallery.find(p => p.id === deleteModal.photoId) ||
+        albumPhotos.find(p => p.id === deleteModal.photoId);
       const { data, error } = await supabase
         .from('photos')
         .delete()
@@ -298,143 +191,81 @@ export function AdminPage() {
       }
 
       setPublicGallery(prev => prev.filter(p => p.id !== deleteModal.photoId));
+      setAlbumPhotos(prev => prev.filter(p => p.id !== deleteModal.photoId));
       setDeleteModal({ show: false, photoId: null });
       setDeletePassword('');
-      setToast({ show: true, msg: 'Foto e arquivos excluídos com sucesso!' });
+      setToast({ show: true, msg: 'Foto excluída com sucesso!' });
       setTimeout(() => setToast({ show: false, msg: '' }), 3000);
     } catch (err) {
       console.error('Erro ao excluir:', err);
-      setDeleteError('Erro de conexão ao excluir. Tente novamente.');
+      setDeleteError('Erro de conexão ao excluir.');
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const getImageDimensions = (
-    file: File
-  ): Promise<{ width: number; height: number }> => {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        resolve({ width: img.width, height: img.height });
-        URL.revokeObjectURL(img.src);
-      };
-    });
-  };
-
-  const executeUpload = async (cardId: string | null, folderName: string) => {
-    if (selectedFiles.length === 0) return;
-    setLoading(true);
+  // --- FUNÇÕES DE UPLOAD ---
+  const processUpload = async (
+    targetId: string | null,
+    folderName: string,
+    isPublic: boolean
+  ) => {
     setConfirmModal(null);
-    setUploadProgress({ current: 0, total: selectedFiles.length });
+    setStatus(null);
 
     try {
-      const uploadedPhotos = [];
-
-      for (let i = 0; i < selectedFiles.length; i++) {
-        setUploadProgress({ current: i + 1, total: selectedFiles.length });
-
-        const file = selectedFiles[i].file;
-
-        // ---> 1.  RESOLUÇÃO DA FOTO ORIGINAL
-        const dimensions = await getImageDimensions(file);
-        const resolutionString = `${dimensions.width} x ${dimensions.height} px`;
-
-        const safeFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-        const timestamp = Date.now();
-        const compressionOptions = {
-          maxSizeMB: 0.6,
-          maxWidthOrHeight: 1080,
-          useWebWorker: true,
-        };
-
-        const compressedFile = await imageCompression(file, compressionOptions);
-        const watermarkedBlob = await applyWatermark(compressedFile);
-        const watermarkedFile = new File(
-          [watermarkedBlob],
-          `wm_${safeFileName}`,
-          { type: 'image/jpeg' }
-        );
-
-        const fileNameOriginal = `${folderName}/original_${timestamp}_${i}_${safeFileName}`;
-        const fileNamePublic = `${folderName}/display_${timestamp}_${i}.jpg`;
-
-        await Promise.all([
-          supabase.storage.from('photos').upload(fileNameOriginal, file),
-          supabase.storage
-            .from('photos')
-            .upload(fileNamePublic, watermarkedFile),
-        ]);
-
-        const {
-          data: { publicUrl: thumbUrl },
-        } = supabase.storage.from('photos').getPublicUrl(fileNamePublic);
-        const {
-          data: { publicUrl: origUrl },
-        } = supabase.storage.from('photos').getPublicUrl(fileNameOriginal);
-
-        uploadedPhotos.push({
-          url: origUrl,
-          thumbnail_url: thumbUrl,
-          price: 15.0,
-          filename: fileNameOriginal,
-          is_public: uploadMode === 'public',
-          description: description.trim() !== '' ? description.trim() : null,
-          resolution: resolutionString, // ---> 2. SALVANDO A RESOLUÇÃO AQUI <---
-          ...(uploadMode === 'private' && { card_id: cardId }),
-        });
-      }
-
-      const { error: photosError } = await supabase
-        .from('photos')
-        .insert(uploadedPhotos);
-
-      if (photosError) throw photosError;
+      await uploadPhotos({
+        files: selectedFiles,
+        folderName,
+        isPublic,
+        albumId: isPublic ? targetId : null,
+        cardId: !isPublic ? targetId : null,
+        description,
+      });
 
       setStatus({
         type: 'success',
-        msg: `Sucesso! ${selectedFiles.length} fotos enviadas para a galeria ${
-          uploadMode === 'public' ? 'pública' : folderName
-        }.`,
+        msg: `Sucesso! ${selectedFiles.length} fotos enviadas.`,
       });
-      setNewToken('');
 
-      // Limpa os arquivos da memória
+      setNewToken('');
       selectedFiles.forEach(f => URL.revokeObjectURL(f.preview));
       setSelectedFiles([]);
       setDescription('');
+
+      if (selectedAlbum) {
+        loadAlbumPhotos(selectedAlbum.id);
+        setUploadMode('manage_albums');
+      }
     } catch (err: any) {
-      console.error(err);
       setStatus({
         type: 'error',
         msg: err.message || 'Erro ao realizar upload.',
       });
-    } finally {
-      setLoading(false);
-      setUploadProgress({ current: 0, total: 0 }); // Zera o contador
     }
   };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = newToken.trim().toUpperCase();
-
     if (selectedFiles.length === 0) return;
-    setLoading(true);
     setStatus(null);
 
     try {
       if (uploadMode === 'private') {
+        const token = newToken.trim().toUpperCase();
+        if (!token) {
+          setError('Defina um código para o álbum privado.');
+          return;
+        }
+
+        setLoading(true);
         const { data: existingCard, error: searchError } = await supabase
           .from('cards')
           .select('id')
           .eq('code', token)
           .maybeSingle();
-
         if (searchError) throw searchError;
 
-        // SE O ÁLBUM EXISTE, MOSTRA O MODAL E PARA O UPLOAD
         if (existingCard) {
           setLoading(false);
           setConfirmModal({ show: true, token, cardId: existingCard.id });
@@ -446,11 +277,15 @@ export function AdminPage() {
           .insert([{ code: token }])
           .select()
           .single();
-
         if (insertError) throw insertError;
-        await executeUpload(newCard.id, token);
+        setLoading(false);
+        await processUpload(newCard.id, token, false);
       } else {
-        await executeUpload(null, 'public_gallery');
+        const folderName = selectedAlbum
+          ? `album_${selectedAlbum.name}`
+          : 'public_gallery';
+        const albumId = selectedAlbum ? selectedAlbum.id : null;
+        await processUpload(albumId, folderName, true);
       }
     } catch (err: any) {
       console.error(err);
@@ -462,10 +297,7 @@ export function AdminPage() {
     }
   };
 
-  // --- ESTADOS E FUNÇÕES DE GERENCIAR CLIENTES ---
-
-  const [clientsList, setClientsList] = useState<any[]>([]);
-
+  // --- FUNÇÕES DE CLIENTES ---
   const loadClients = async () => {
     setLoading(true);
     try {
@@ -476,7 +308,7 @@ export function AdminPage() {
       if (error) throw error;
       setClientsList(data || []);
     } catch (err) {
-      console.error('Erro ao carregar clientes:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -484,34 +316,26 @@ export function AdminPage() {
 
   const handleDeleteClient = async (cardId: string, cardCode: string) => {
     const pass = window.prompt(
-      `ALERTA: Isso apagará o cliente ${cardCode} e TODAS as suas fotos do banco e do storage.\n\nDigite a senha de autorização:`
+      `ALERTA: Apagar cliente ${cardCode} e fotos? Digite a senha:`
     );
-
-    // Aceita tanto a senha master quanto a do Lambert
     if (pass !== '1502' && pass !== 'moises') {
-      if (pass !== null) alert('Senha incorreta. Exclusão cancelada.');
+      if (pass !== null) alert('Senha incorreta.');
       return;
     }
 
     setLoading(true);
     try {
-      // 1. Busca as fotos para poder apagar os arquivos físicos no Storage
       const { data: photos } = await supabase
         .from('photos')
         .select('filename, thumbnail_url')
         .eq('card_id', cardId);
-
-      // 2. Apaga as fotos da tabela (para não dar erro de chave estrangeira)
       await supabase.from('photos').delete().eq('card_id', cardId);
-
-      // 3. Apaga o álbum (card) da tabela
       const { error: cardError } = await supabase
         .from('cards')
         .delete()
         .eq('id', cardId);
       if (cardError) throw cardError;
 
-      // 4. Apaga os arquivos físicos no Storage para liberar espaço
       if (photos && photos.length > 0) {
         const filesToRemove: string[] = [];
         photos.forEach(p => {
@@ -521,24 +345,22 @@ export function AdminPage() {
             if (urlParts.length > 1) filesToRemove.push(urlParts[1]);
           }
         });
-        if (filesToRemove.length > 0) {
+        if (filesToRemove.length > 0)
           await supabase.storage.from('photos').remove(filesToRemove);
-        }
       }
 
-      // 5. Atualiza a tela
       setClientsList(prev => prev.filter(c => c.id !== cardId));
-      setToast({ show: true, msg: `Cliente ${cardCode} excluído!` });
+      setToast({ show: true, msg: `Cliente excluído!` });
       setTimeout(() => setToast({ show: false, msg: '' }), 3000);
     } catch (err) {
-      console.error('Erro ao excluir cliente:', err);
-      alert(
-        'Erro ao excluir. Verifique se o Supabase tem permissão de DELETE na tabela cards.'
-      );
+      console.error(err);
+      alert('Erro ao excluir cliente.');
     } finally {
       setLoading(false);
     }
   };
+
+  // --- FUNÇÕES DE ÁLBUNS PÚBLICOS ---
   const loadPublicAlbums = async () => {
     setLoading(true);
     try {
@@ -549,16 +371,37 @@ export function AdminPage() {
       if (error) throw error;
       setPublicAlbums(data || []);
     } catch (err) {
-      console.error('Erro ao carregar álbuns:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
+  const loadAlbumPhotos = async (albumId: string) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('public_album_id', albumId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setAlbumPhotos(data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openAlbum = (album: any) => {
+    setSelectedAlbum(album);
+    loadAlbumPhotos(album.id);
+  };
+
   const handleCreateAlbum = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAlbumName.trim()) return;
-
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -566,277 +409,76 @@ export function AdminPage() {
         .insert([{ name: newAlbumName.trim() }])
         .select()
         .single();
-
       if (error) throw error;
-
       setPublicAlbums(prev => [data, ...prev]);
       setNewAlbumName('');
-      setToast({ show: true, msg: `Álbum "${data.name}" criado!` });
+      setToast({ show: true, msg: `Álbum criado!` });
       setTimeout(() => setToast({ show: false, msg: '' }), 3000);
     } catch (err) {
-      console.error('Erro ao criar álbum:', err);
-      alert('Erro ao criar álbum. Verifique as permissões no Supabase.');
+      console.error(err);
+      alert('Erro ao criar álbum.');
     } finally {
       setLoading(false);
     }
   };
 
-  // --- TELA 1: LOGIN OU CADASTRO ---
+  const handleDeleteAlbum = async (albumId: string, albumName: string) => {
+    if (
+      !window.confirm(
+        `Apagar álbum "${albumName}"? As fotos ficarão sem álbum.`
+      )
+    )
+      return;
+    setLoading(true);
+    try {
+      await supabase
+        .from('photos')
+        .update({ public_album_id: null })
+        .eq('public_album_id', albumId);
+      const { error } = await supabase
+        .from('public_albums')
+        .delete()
+        .eq('id', albumId);
+      if (error) throw error;
+      setPublicAlbums(prev => prev.filter(a => a.id !== albumId));
+      setToast({ show: true, msg: 'Álbum removido!' });
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao apagar álbum.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==========================================
+  // RENDERIZAÇÃO DAS TELAS
+  // ==========================================
+
+  // --- TELA 1: LOGIN ---
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-light text-gray-900">
-              {isRegistering ? 'Novo Fotógrafo' : 'Área do Fotógrafo'}
-            </h2>
-            <p className="text-sm text-gray-500 mt-2">
-              {isRegistering ? 'Junte-se ao Elephoto' : 'Acesso restrito'}
-            </p>
-          </div>
-          <form
-            onSubmit={isRegistering ? handleRegister : handleLogin}
-            className="space-y-4"
-          >
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Login
-              </label>
-              <input
-                type="text"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                placeholder={isRegistering ? 'Escolha um nome de usuário' : ''}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Senha
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none pr-12 transition-all"
-                  placeholder={isRegistering ? 'Crie uma senha segura' : ''}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-purple-600 transition-colors"
-                  title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {status && (
-              <div
-                className={`p-4 rounded-lg text-sm text-center font-medium animate-in fade-in slide-in-from-top-2 ${
-                  status.type === 'success'
-                    ? 'bg-purple-50 text-purple-700 border border-purple-200 shadow-sm'
-                    : 'bg-red-50 text-red-600 border border-red-100'
-                }`}
-              >
-                {status.msg}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-purple-700 transition-colors mt-2 font-medium"
-            >
-              {isRegistering ? 'Cadastrar' : 'Entrar'}
-            </button>
-
-            {/* O NOVO LINK DE ALTERNAR TELAS */}
-            <div className="text-center mt-6 pt-4 border-t border-gray-100">
-              {isRegistering ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRegistering(false);
-                    setError(null);
-                  }}
-                  className="text-sm text-blue-600 hover:text-purple-700 hover:underline transition-colors"
-                >
-                  Já tem uma conta? Entre aqui
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRegistering(true);
-                    setError(null);
-                  }}
-                  className="text-sm text-blue-600 hover:text-purple-700 hover:underline transition-colors"
-                >
-                  Ainda não é um Elephotografo? Cadastre-se
-                </button>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setCurrentView('home')}
-              className="w-full text-gray-400 text-xs hover:text-gray-600 mt-4 transition-colors"
-            >
-              Voltar para a página inicial
-            </button>
-          </form>
-        </div>
-      </div>
+      <AdminLogin
+        onLoginSuccess={() => setIsAuthenticated(true)}
+        onBackToHome={() => setCurrentView('home')}
+      />
     );
   }
 
-  // --- TELA 2: DASHBOARD COM 3 BOTÕES ---
+  // --- TELA 2: DASHBOARD (MENU) ---
   if (uploadMode === 'selection') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-gray-900">Elephoto Admin</span>
-          </div>
-          <button
-            onClick={() => {
-              setIsAuthenticated(false);
-              setCurrentView('home');
-            }}
-            className="text-gray-500 hover:text-red-600 flex items-center gap-2 text-sm transition-colors"
-          >
-            <LogOut className="w-4 h-4" /> Sair
-          </button>
-        </header>
-
-        <main className="max-w-6xl mx-auto p-6 mt-10">
-          <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              O que vamos fazer hoje?
-            </h1>
-            <p className="text-gray-500 text-lg">
-              Selecione o destino das fotos ou gerencie sua vitrine.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <button
-              onClick={() => setUploadMode('private')}
-              className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
-            >
-              <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform">
-                <Lock className="w-8 h-8" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Fotos do Cliente
-                </h2>
-                <p className="text-gray-500 leading-relaxed text-sm">
-                  Álbum privado e seguro. Exige a criação de um código único.
-                </p>
-              </div>
-              <div className="mt-auto pt-4 flex items-center text-blue-600 font-semibold text-sm">
-                <ImagePlus className="w-5 h-5 mr-2" /> Enviar fotos privadas
-              </div>
-            </button>
-
-            <button
-              onClick={() => setUploadMode('public')}
-              className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
-            >
-              <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-110 transition-transform">
-                <Globe className="w-8 h-8" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Fotos Públicas
-                </h2>
-                <p className="text-gray-500 leading-relaxed text-sm">
-                  Fotos genéricas (paisagens, detalhes) para a vitrine livre.
-                </p>
-              </div>
-              <div className="mt-auto pt-4 flex items-center text-emerald-600 font-semibold text-sm">
-                <ImagePlus className="w-5 h-5 mr-2" /> Enviar fotos públicas
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                setUploadMode('manage');
-                loadPublicGallery();
-              }}
-              className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
-            >
-              <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 transition-transform">
-                <LayoutList className="w-8 h-8" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Gerenciar Vitrine
-                </h2>
-                <p className="text-gray-500 leading-relaxed text-sm">
-                  Edite as descrições das fotos que já estão na vitrine pública.
-                </p>
-              </div>
-              <div className="mt-auto pt-4 flex items-center text-purple-600 font-semibold text-sm">
-                <Save className="w-5 h-5 mr-2" /> Editar Descrições
-              </div>
-            </button>
-            {/* NOVO BOTÃO: GERENCIAR CLIENTES */}
-            <button
-              onClick={() => {
-                setUploadMode('clients');
-                loadClients();
-              }}
-              className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
-            >
-              <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl group-hover:scale-110 transition-transform">
-                <LayoutList className="w-8 h-8" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Gerenciar Clientes
-                </h2>
-                <p className="text-gray-500 leading-relaxed text-sm">
-                  Visualize todos os álbuns criados e exclua clientes antigos.
-                </p>
-              </div>
-              <div className="mt-auto pt-4 flex items-center text-orange-600 font-semibold text-sm">
-                <Trash2 className="w-5 h-5 mr-2" /> Limpar Base de Clientes
-              </div>
-            </button>
-            {/* NOVO BOTÃO: ORGANIZAR ÁLBUNS PÚBLICOS */}
-            <button
-              onClick={() => {
-                setUploadMode('manage_albums' as any); // Usamos o cast para evitar erro de tipo agora
-                loadPublicAlbums();
-              }}
-              className="group bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl border border-gray-200 transition-all text-left flex flex-col items-start gap-6"
-            >
-              <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 transition-transform">
-                <ImageIcon className="w-8 h-8" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Organizar Álbuns
-                </h2>
-                <p className="text-gray-500 leading-relaxed text-sm">
-                  Crie pastas como "Praia da Barra" e gerencie fotos por local.
-                </p>
-              </div>
-              <div className="mt-auto pt-4 flex items-center text-purple-600 font-semibold text-sm">
-                <Plus className="w-5 h-5 mr-2" /> Criar Novo Álbum
-              </div>
-            </button>
-          </div>
-        </main>
-      </div>
+      <AdminDashboard
+        onLogout={() => {
+          setIsAuthenticated(false);
+          setCurrentView('home');
+        }}
+        onNavigate={mode => setUploadMode(mode)}
+        loadPublicGallery={loadPublicGallery}
+        loadClients={loadClients}
+        loadPublicAlbums={loadPublicAlbums}
+        clearSelectedAlbum={() => setSelectedAlbum(null)}
+      />
     );
   }
 
@@ -854,10 +496,9 @@ export function AdminPage() {
                 Excluir Foto?
               </h2>
               <p className="text-gray-600 mb-6 leading-relaxed">
-                Esta ação apagará a foto do sistema. Digite a senha de
-                autorização para confirmar.
+                Esta ação apagará a foto do sistema. Digite a senha para
+                confirmar.
               </p>
-
               <input
                 type="password"
                 placeholder="Senha"
@@ -865,13 +506,11 @@ export function AdminPage() {
                 onChange={e => setDeletePassword(e.target.value)}
                 className="w-full px-4 py-3 mb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-center tracking-widest text-lg font-mono"
               />
-
               {deleteError && (
                 <p className="text-red-500 text-sm mb-4 animate-in fade-in">
                   {deleteError}
                 </p>
               )}
-
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => {
@@ -905,7 +544,6 @@ export function AdminPage() {
             <button
               onClick={() => setUploadMode('selection')}
               className="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-full hover:bg-gray-100"
-              title="Voltar"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -922,7 +560,6 @@ export function AdminPage() {
               <span className="font-medium">{toast.msg}</span>
             </div>
           )}
-
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-500">
               <Loader2 className="w-10 h-10 animate-spin text-purple-600 mb-4" />
@@ -953,7 +590,6 @@ export function AdminPage() {
                           setDeleteModal({ show: true, photoId: photo.id })
                         }
                         className="absolute top-2 right-2 p-2 bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200"
-                        title="Excluir foto"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -962,11 +598,10 @@ export function AdminPage() {
                       <div
                         onClick={() => setShowProfileModal(true)}
                         className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-100 shadow-sm cursor-pointer hover:scale-110 transition-transform duration-200"
-                        title="Ampliar foto"
                       >
                         <img
                           src="/J. D.jpeg"
-                          alt="Jorge Lambert"
+                          alt="Jorge"
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -975,14 +610,14 @@ export function AdminPage() {
                           J. D'Allambert
                         </span>
                         <span className="text-[10px] text-blue-500 font-medium uppercase tracking-wider">
-                          Fotógrafo Parceiro
+                          Fotógrafo
                         </span>
                       </div>
                     </div>
                     <div className="p-4 flex flex-col flex-1 gap-3">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                          Descrição da Imagem
+                          Descrição
                         </label>
                         {photo.description && !isEditing && (
                           <button
@@ -993,7 +628,6 @@ export function AdminPage() {
                               }))
                             }
                             className="text-purple-600 hover:text-purple-800 transition-colors p-1"
-                            title="Editar descrição"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -1009,7 +643,6 @@ export function AdminPage() {
                                 [photo.id]: e.target.value,
                               }))
                             }
-                            placeholder="Sem descrição... Clique para adicionar."
                             className="w-full flex-1 min-h-[80px] p-3 border border-gray-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-purple-500 outline-none transition-all bg-gray-50 focus:bg-white"
                           />
                           <div className="mt-auto flex gap-2">
@@ -1039,7 +672,7 @@ export function AdminPage() {
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
                                 <Save className="w-4 h-4" />
-                              )}
+                              )}{' '}
                               Salvar
                             </button>
                           </div>
@@ -1068,14 +701,12 @@ export function AdminPage() {
               <button
                 onClick={() => setShowProfileModal(false)}
                 className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors p-2"
-                title="Fechar"
               >
                 <X className="w-8 h-8" />
               </button>
-
               <img
                 src="/J. D.jpeg"
-                alt="Jorge Lambert Ampliado"
+                alt="Ampliado"
                 className="w-full h-auto rounded-2xl shadow-2xl border border-white/10"
               />
             </div>
@@ -1084,8 +715,9 @@ export function AdminPage() {
       </div>
     );
   }
-  // --- TELA: GERENCIAR ÁLBUNS PÚBLICOS ---
-  if ((uploadMode as string) === 'manage_albums') {
+
+  // --- TELA DE ÁLBUNS PÚBLICOS ---
+  if (uploadMode === 'manage_albums') {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
@@ -1103,7 +735,12 @@ export function AdminPage() {
         </header>
 
         <main className="max-w-4xl mx-auto p-6 mt-6">
-          {/* Formulário de Criação */}
+          {toast.show && (
+            <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <span className="font-medium">{toast.msg}</span>
+            </div>
+          )}
           <form
             onSubmit={handleCreateAlbum}
             className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-8 flex gap-4"
@@ -1124,7 +761,6 @@ export function AdminPage() {
             </button>
           </form>
 
-          {/* Lista de Álbuns */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {publicAlbums.map(album => (
               <div
@@ -1141,14 +777,14 @@ export function AdminPage() {
                 <div className="flex gap-2">
                   <button
                     className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Adicionar/Ver fotos"
-                    onClick={() =>
-                      alert('Próximo passo: Tela de fotos deste álbum!')
-                    }
+                    onClick={() => openAlbum(album)}
                   >
                     <ImagePlus className="w-5 h-5" />
                   </button>
-                  <button className="p-2 text-red-400 hover:text-red-600 rounded-lg">
+                  <button
+                    onClick={() => handleDeleteAlbum(album.id, album.name)}
+                    className="p-2 text-red-400 hover:text-red-600 rounded-lg transition-colors"
+                  >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
@@ -1159,7 +795,118 @@ export function AdminPage() {
       </div>
     );
   }
-  // --- NOVA TELA: GERENCIAR CLIENTES ---
+
+  // --- TELA: CONTEÚDO DO ÁLBUM ESPECÍFICO ---
+  if (selectedAlbum) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-20">
+        {deleteModal.show && (
+          <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in">
+              <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                <Trash2 className="w-8 h-8 text-red-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Excluir Foto?
+              </h2>
+              <input
+                type="password"
+                placeholder="Senha"
+                value={deletePassword}
+                onChange={e => setDeletePassword(e.target.value)}
+                className="w-full px-4 py-3 mb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-center tracking-widest text-lg font-mono"
+              />
+              {deleteError && (
+                <p className="text-red-500 text-sm mb-4 animate-in fade-in">
+                  {deleteError}
+                </p>
+              )}
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setDeleteModal({ show: false, photoId: null });
+                    setDeletePassword('');
+                    setDeleteError('');
+                  }}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-colors"
+                  disabled={isDeleting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={isDeleting || !deletePassword}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-xl transition-colors flex justify-center items-center gap-2"
+                >
+                  Excluir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSelectedAlbum(null)}
+              className="text-gray-500 hover:text-gray-900 transition-colors p-2 rounded-full hover:bg-gray-100"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <span className="font-semibold text-gray-900">
+              Fotos de: {selectedAlbum.name}
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setUploadMode('public');
+              setNewToken('');
+            }}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Adicionar Novas Fotos
+          </button>
+        </header>
+
+        <main className="max-w-6xl mx-auto p-6">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <Loader2 className="w-10 h-10 animate-spin" />
+              <p>Carregando fotos...</p>
+            </div>
+          ) : albumPhotos.length === 0 ? (
+            <div className="text-center py-20 text-gray-500">
+              <p>Este álbum ainda não tem fotos.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {albumPhotos.map(photo => (
+                <div
+                  key={photo.id}
+                  className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 shadow-sm"
+                >
+                  <img
+                    src={photo.thumbnail_url}
+                    className="w-full h-full object-cover"
+                    alt=""
+                  />
+                  <button
+                    onClick={() =>
+                      setDeleteModal({ show: true, photoId: photo.id })
+                    }
+                    className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // --- TELA DE GERENCIAR CLIENTES ---
   if (uploadMode === 'clients') {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -1168,7 +915,6 @@ export function AdminPage() {
             <button
               onClick={() => setUploadMode('selection')}
               className="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-full hover:bg-gray-100"
-              title="Voltar"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -1266,17 +1012,14 @@ export function AdminPage() {
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setConfirmModal(null);
-                  setLoading(false);
-                }}
+                onClick={() => setConfirmModal(null)}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={() =>
-                  executeUpload(confirmModal.cardId, confirmModal.token)
+                  processUpload(confirmModal.cardId, confirmModal.token, false)
                 }
                 className="flex-1 bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-xl transition-colors"
               >
@@ -1291,20 +1034,25 @@ export function AdminPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => {
-              setUploadMode('selection');
+              if (selectedAlbum) {
+                setUploadMode('manage_albums');
+              } else {
+                setUploadMode('selection');
+              }
               setStatus(null);
               setSelectedFiles([]);
               setNewToken('');
               setDescription('');
             }}
             className="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-full hover:bg-gray-100"
-            title="Voltar"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <span className="font-semibold text-gray-900">
             {uploadMode === 'private'
               ? 'Novo Álbum Privado'
+              : selectedAlbum
+              ? `Adicionando a: ${selectedAlbum.name}`
               : 'Nova Galeria Pública'}
           </span>
         </div>
@@ -1341,29 +1089,25 @@ export function AdminPage() {
                   maxLength={12}
                   placeholder="EX: MEUALBUM123"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 outline-none uppercase font-semibold tracking-widest font-mono"
-                  disabled={loading}
+                  disabled={isUploading}
                 />
               </div>
             )}
 
-            {/* SECÇÃO 2: SELEÇÃO DE FOTOS E GRID DE MINIATURAS */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {uploadMode === 'private'
                   ? '2. Selecione as Fotos'
                   : '1. Selecione as Fotos'}
               </label>
-
-              {/* ÁREA DE CLICK E ARRASTAR (CAIXA TRACEJADA) */}
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer relative">
                 <input
                   type="file"
-                  id="file-upload"
                   multiple
                   accept="image/*"
                   onChange={handleFileSelect}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  disabled={loading}
+                  disabled={isUploading}
                 />
                 <div className="flex flex-col items-center pointer-events-none">
                   <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
@@ -1378,7 +1122,6 @@ export function AdminPage() {
                 </div>
               </div>
 
-              {/* >>> O GRID DE MINIATURAS ENTRA AQUI! <<< */}
               {selectedFiles.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 animate-in fade-in zoom-in-95 duration-200">
                   {selectedFiles.map((item, idx) => (
@@ -1388,15 +1131,13 @@ export function AdminPage() {
                     >
                       <img
                         src={item.preview}
-                        alt={`preview-${idx}`}
+                        alt="preview"
                         className="w-full h-full object-cover"
                       />
-                      {/* BOTÃO DE EXCLUIR MINIATURA */}
                       <button
                         type="button"
                         onClick={() => removeFile(idx)}
                         className="absolute top-1 right-1 bg-red-500/90 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-600 hover:scale-110 transition-all shadow-md"
-                        title="Remover foto"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -1415,17 +1156,13 @@ export function AdminPage() {
                   type="text"
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  placeholder="Ex: Ensaio de casamento na praia (aplicado a todas)"
+                  placeholder="Ex: Ensaio de casamento na praia"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                  disabled={loading}
+                  disabled={isUploading}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Essa descrição será exibida para o cliente na vitrine.
-                </p>
               </div>
             )}
 
-            {/* ERRO OU SUCESSO */}
             {status && (
               <div
                 className={`p-4 rounded-lg text-sm text-center font-medium animate-in fade-in slide-in-from-top-2 ${
@@ -1441,7 +1178,7 @@ export function AdminPage() {
             <button
               type="submit"
               disabled={
-                loading ||
+                isUploading ||
                 (uploadMode === 'private' && newToken.trim() === '') ||
                 selectedFiles.length === 0
               }
@@ -1451,9 +1188,9 @@ export function AdminPage() {
                   : 'bg-gray-900 hover:bg-gray-800'
               }`}
             >
-              {loading ? (
+              {isUploading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />{' '}
                   {uploadProgress.total > 0
                     ? `Enviando foto ${uploadProgress.current} de ${uploadProgress.total}...`
                     : 'Processando Imagens...'}
