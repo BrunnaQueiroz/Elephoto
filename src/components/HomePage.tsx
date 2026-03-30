@@ -50,13 +50,49 @@ export function HomePage() {
     setCode(formattedCode);
   };
 
+  // antigo
+  // const handleDownloadOriginals = async () => {
+  //   for (const photo of cart) {
+  //     if (photo.filename) {
+  //       try {
+  //         const { data } = await supabase.storage
+  //           .from('photos')
+  //           .download(photo.filename);
+
+  //         if (data) {
+  //           const url = window.URL.createObjectURL(data);
+  //           const a = document.createElement('a');
+  //           a.style.display = 'none';
+  //           a.href = url;
+  //           a.download = `original_${photo.id.slice(0, 5)}.jpg`;
+  //           document.body.appendChild(a);
+  //           a.click();
+  //           window.URL.revokeObjectURL(url);
+  //         }
+  //       } catch (err) {
+  //         console.error('Erro ao baixar', err);
+  //       }
+  //     }
+  //   }
+  //   clearCart();
+  //   setShowSuccessModal(false);
+  // };
+
+  // novo
   const handleDownloadOriginals = async () => {
-    for (const photo of cart) {
+    // 1. Salva as fotos numa variável segura antes do loop
+    const fotosParaBaixar = [...cart];
+
+    for (let i = 0; i < fotosParaBaixar.length; i++) {
+      const photo = fotosParaBaixar[i];
+
       if (photo.filename) {
         try {
-          const { data } = await supabase.storage
+          const { data, error } = await supabase.storage
             .from('photos')
             .download(photo.filename);
+
+          if (error) throw error;
 
           if (data) {
             const url = window.URL.createObjectURL(data);
@@ -65,14 +101,24 @@ export function HomePage() {
             a.href = url;
             a.download = `original_${photo.id.slice(0, 5)}.jpg`;
             document.body.appendChild(a);
+
             a.click();
-            window.URL.revokeObjectURL(url);
+
+            document.body.removeChild(a);
+
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+
+            //  Pausa de meio segundo entre cada foto.
+
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         } catch (err) {
-          console.error('Erro ao baixar', err);
+          console.error(`Erro ao baixar a foto ${i + 1}:`, err);
         }
       }
     }
+
+    // Só limpa o carrinho e fecha o modal DEPOIS que baixar todas as fotos
     clearCart();
     setShowSuccessModal(false);
   };
