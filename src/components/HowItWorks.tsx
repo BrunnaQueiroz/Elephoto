@@ -19,7 +19,7 @@ export function HowItWorks() {
       number: '3',
       title: 'Entrega Mágica',
       description:
-        'O cliente acessa, visualiza, seleciona e baixa suas fotos favoritas após a confirmação do pagamento.',
+        'O cliente acessa, visualiza, seleciona e baixa suas fotos favoritas.',
       colorClass: 'bg-pink-100 text-pink-700',
     },
   ];
