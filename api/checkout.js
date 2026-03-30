@@ -10,6 +10,13 @@ export default async function handler(req, res) {
   try {
     const { cart } = req.body;
 
+    // PREPARA OS METADADOS DA SESSÃO
+
+    const sessionMetadata = {};
+    cart.forEach((photo, index) => {
+      sessionMetadata[`photo_${index}`] = photo.id;
+    });
+
     // Cria a sessão de checkout no Stripe
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -17,17 +24,17 @@ export default async function handler(req, res) {
         price_data: {
           currency: 'brl',
           product_data: {
-            name: 'Foto Digital (Alta Resolução)',
+            name: photo.name || 'Foto Digital (Alta Resolução)',
             images: [photo.thumbnail_url],
-            metadata: { photo_id: photo.id },
           },
           unit_amount: Math.round(Number(photo.price) * 100), // Convertendo para centavos
         },
         quantity: 1,
       })),
       mode: 'payment',
-      success_url: `${req.headers.origin}/?success=true`, // Volta para Home com sucesso
-      cancel_url: `${req.headers.origin}/?canceled=true`, // Volta se cancelar
+      metadata: sessionMetadata,
+      success_url: `${req.headers.origin}/?success=true`,
+      cancel_url: `${req.headers.origin}/?canceled=true`,
     });
 
     res.status(200).json({ url: session.url });

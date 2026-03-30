@@ -58,13 +58,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const cartTotal = cart.reduce((total, _, index) => {
     // NOVA REGRA DE PREÇO (Cálculo do valor total no rodapé)
 
-    // ORIGINAL
-    // const fixedPrices = [4.99, 4.19, 3.69, 3.1, 2.7, 2.19];
-    // const precoDaFoto = index < 6 ? fixedPrices[index] : 1.99;
-
-    // PARA TESTAR
-    const fixedPrices = [0.01, 0.01, 0.01, 3.1, 2.7, 2.19];
-    const precoDaFoto = index < 6 ? fixedPrices[index] : 0.01;
+    const fixedPrices = [4.99, 4.19, 3.69, 3.1, 2.7, 2.19];
+    const precoDaFoto = index < 6 ? fixedPrices[index] : 1.99;
 
     return total + precoDaFoto;
   }, 0);
