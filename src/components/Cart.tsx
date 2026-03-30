@@ -153,7 +153,7 @@ export function Cart({ isOpen, onClose }: CartProps) {
         // const precoExibicao = index < 6 ? fixedPrices[index] : 1.99;
 
         // PARA TESTAR
-        const fixedPrices = [0.01, 4.19, 3.69, 3.1, 2.7, 2.19];
+        const fixedPrices = [0.01, 0.01, 0.01, 3.1, 2.7, 2.19];
         const precoExibicao = index < 6 ? fixedPrices[index] : 0.01;
 
         return {
@@ -252,7 +252,7 @@ export function Cart({ isOpen, onClose }: CartProps) {
                 // const fixedPrices = [4.99, 4.19, 3.69, 3.1, 2.7, 2.19];
                 // const precoExibicao = index < 6 ? fixedPrices[index] : 1.99;
                 // PARA TESTE
-                const fixedPrices = [0.01, 4.19, 3.69, 3.1, 2.7, 2.19];
+                const fixedPrices = [0.01, 0.01, 0.01, 3.1, 2.7, 2.19];
                 const precoExibicao = index < 6 ? fixedPrices[index] : 0.01;
 
                 return (

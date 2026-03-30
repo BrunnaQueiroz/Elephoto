@@ -63,7 +63,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // const precoDaFoto = index < 6 ? fixedPrices[index] : 1.99;
 
     // PARA TESTAR
-    const fixedPrices = [0.01, 4.19, 3.69, 3.1, 2.7, 2.19];
+    const fixedPrices = [0.01, 0.01, 0.01, 3.1, 2.7, 2.19];
     const precoDaFoto = index < 6 ? fixedPrices[index] : 0.01;
 
     return total + precoDaFoto;
