@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
@@ -23,6 +25,7 @@ export function HomePage() {
   const [showInput, setShowInput] = useState(false);
   const [code, setCode] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // --- LÓGICA DE PAGAMENTO (SUCESSO E CANCELAMENTO) ---
   useEffect(() => {
@@ -49,15 +52,64 @@ export function HomePage() {
     const formattedCode = e.target.value.toUpperCase().replace(/\s/g, '');
     setCode(formattedCode);
   };
+  // --- NOVA LÓGICA COM ZIP ---
+  const handleDownloadOriginals = async () => {
+    setIsDownloading(true);
+    const zip = new JSZip();
+    const fotosParaBaixar = [...cart];
 
-  // antigo
+    try {
+      // Cria uma promessa de download para cada foto no Supabase
+      const promessas = fotosParaBaixar.map(async (photo, index) => {
+        if (photo.filename) {
+          const { data, error } = await supabase.storage
+            .from('photos')
+            .download(photo.filename);
+
+          if (error) throw error;
+
+          if (data) {
+            // Coloca a foto dentro do arquivo ZIP
+            const nomeArquivo = `foto_alta_${index + 1}.jpg`;
+            zip.file(nomeArquivo, data);
+          }
+        }
+      });
+
+      // Espera baixar todas as fotos silenciosamente
+      await Promise.all(promessas);
+
+      // Compacta tudo e gera o ZIP final
+      const conteudoZip = await zip.generateAsync({ type: 'blob' });
+
+      // Entrega o ZIP de uma vez para o cliente
+      saveAs(conteudoZip, 'Minhas_Fotos_Elephoto.zip');
+
+      // Limpa a tela
+      clearCart();
+      setShowSuccessModal(false);
+    } catch (err) {
+      console.error('Erro ao gerar o ZIP:', err);
+      alert('Houve um erro ao empacotar suas fotos. Tente novamente.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   // const handleDownloadOriginals = async () => {
-  //   for (const photo of cart) {
+  //   // 1. Salva as fotos numa variável segura antes do loop
+  //   const fotosParaBaixar = [...cart];
+
+  //   for (let i = 0; i < fotosParaBaixar.length; i++) {
+  //     const photo = fotosParaBaixar[i];
+
   //     if (photo.filename) {
   //       try {
-  //         const { data } = await supabase.storage
+  //         const { data, error } = await supabase.storage
   //           .from('photos')
   //           .download(photo.filename);
+
+  //         if (error) throw error;
 
   //         if (data) {
   //           const url = window.URL.createObjectURL(data);
@@ -66,62 +118,27 @@ export function HomePage() {
   //           a.href = url;
   //           a.download = `original_${photo.id.slice(0, 5)}.jpg`;
   //           document.body.appendChild(a);
+
   //           a.click();
-  //           window.URL.revokeObjectURL(url);
+
+  //           document.body.removeChild(a);
+
+  //           setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+
+  //           //  Pausa de meio segundo entre cada foto.
+
+  //           await new Promise(resolve => setTimeout(resolve, 500));
   //         }
   //       } catch (err) {
-  //         console.error('Erro ao baixar', err);
+  //         console.error(`Erro ao baixar a foto ${i + 1}:`, err);
   //       }
   //     }
   //   }
+
+  //   // Só limpa o carrinho e fecha o modal DEPOIS que baixar todas as fotos
   //   clearCart();
   //   setShowSuccessModal(false);
   // };
-
-  // novo
-  const handleDownloadOriginals = async () => {
-    // 1. Salva as fotos numa variável segura antes do loop
-    const fotosParaBaixar = [...cart];
-
-    for (let i = 0; i < fotosParaBaixar.length; i++) {
-      const photo = fotosParaBaixar[i];
-
-      if (photo.filename) {
-        try {
-          const { data, error } = await supabase.storage
-            .from('photos')
-            .download(photo.filename);
-
-          if (error) throw error;
-
-          if (data) {
-            const url = window.URL.createObjectURL(data);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `original_${photo.id.slice(0, 5)}.jpg`;
-            document.body.appendChild(a);
-
-            a.click();
-
-            document.body.removeChild(a);
-
-            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-
-            //  Pausa de meio segundo entre cada foto.
-
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        } catch (err) {
-          console.error(`Erro ao baixar a foto ${i + 1}:`, err);
-        }
-      }
-    }
-
-    // Só limpa o carrinho e fecha o modal DEPOIS que baixar todas as fotos
-    clearCart();
-    setShowSuccessModal(false);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,11 +163,21 @@ export function HomePage() {
             <p className="text-gray-600 mb-6">
               Obrigado pela compra. Suas fotos em alta resolução estão prontas.
             </p>
-            <button
+            {/* <button
               onClick={handleDownloadOriginals}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Download className="w-5 h-5" /> Baixar Fotos Originais
+            </button> */}
+            <button
+              onClick={handleDownloadOriginals}
+              disabled={isDownloading}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+            >
+              <Download className="w-5 h-5" />
+              {isDownloading
+                ? 'Empacotando fotos... (aguarde)'
+                : 'Baixar Todas as Fotos (ZIP)'}
             </button>
           </div>
         </div>
